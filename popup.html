@@ -3,6 +3,7 @@
   <head>
     <meta charset="utf-8">
     <script src="early-input.js"></script>
+    <meta name="color-scheme" content="light dark">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Flytab</title>
     <link rel="icon" type="image/png" href="icons/icon-32.png">
@@ -10,26 +11,11 @@
     <script type="module" src="popup.js"></script>
   </head>
   <body>
-    <header>
-      <h1>
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <rect x="1" y="2.5" width="22" height="19" rx="1.25"/>
-          <polyline points="7.75,2.5 9.25,7 23,7"/>
-          <line x1="15.5" y1="2.5" x2="17" y2="7"/>
-          <line x1="16.25" y1="14.5" x2="7.75" y2="14.5"/>
-          <polyline points="10.75,11.5 7.75,14.5 10.75,17.5"/>
-        </svg>Flytab
-      </h1>
-      <span id="position" aria-hidden="true">Recent tabs</span>
-    </header>
     <main>
       <div id="tabs" role="listbox" aria-label="Recent tabs" aria-describedby="hint" tabindex="0" aria-busy="true"></div>
       <p id="empty" hidden>Visit another tab to start switching.</p>
       <p id="error" role="alert" hidden></p>
     </main>
-    <footer>
-      <p id="hint">Loading recent tabs…</p>
-      <p class="keys"><span><kbd>Enter</kbd> switch</span><span><kbd>Esc</kbd> cancel</span><button id="cancel" type="button">Cancel</button></p>
-    </footer>
+    <p id="hint" class="sr-only">F next. Release modifiers to switch. Enter selects. Escape cancels.</p>
   </body>
 </html>

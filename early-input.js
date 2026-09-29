@@ -43,7 +43,7 @@
         if (!isF && !isShortcutKey && !modifiers.includes(event.key)) return;
       } else {
         // Escape must work while the opening chord is still held. Preserve
-        // native Enter activation on Cancel, including with modifiers held.
+        // native Enter activation on buttons, including with modifiers held.
         if (event.key === 'Enter' && event.target?.closest?.('button')) return;
         const confirmOrCancel = ['Escape', 'Enter'].includes(event.key);
         // While this document owns input the browser command listener is

@@ -9,7 +9,7 @@ Jump straight back to the Chrome tab you were just on, across windows. A minimal
 3. **Pin Flytab** from Chrome's Extensions menu for the fastest switcher opening and the toolbar shortcut.
 4. Open `chrome://extensions/shortcuts`. Confirm **Switch to previous tab** is **Option+F** and **Open recent tabs** is **Option+Shift+F** on macOS. If it is blank or conflicts with another shortcut, assign one. Keep its scope **In Chrome**.
 
-After updating, click **Reload** on Flytab's extension card and confirm version **0.4.1**. Existing shortcut assignments are preserved; check the shortcuts page if you previously remapped them. No separate app is needed.
+After updating, click **Reload** on Flytab's extension card and confirm version **0.4.2**. Existing shortcut assignments are preserved; check the shortcuts page if you previously remapped them. No separate app is needed.
 
 ## Use
 
@@ -29,7 +29,7 @@ Shift is part of the opening shortcut; it never reverses direction. Releasing F 
 | Option+Shift+F with list closed | Opens the list, selecting the previous tab |
 | Repeat Option+Shift+F while list is open | Moves forward through older entries, wrapping at the end |
 | Release both Option and Shift | Activates the highlighted tab and closes the list |
-| Esc / Cancel / close window | Cancels, including Esc while holding the shortcut |
+| Esc / click outside / close window | Cancels, including Esc while holding the shortcut |
 | Enter / click an entry | Also activates it; available if Chrome misses the release |
 | Mouse wheel / unmodified arrow keys | Browses the list; Up or scrolling up moves back |
 

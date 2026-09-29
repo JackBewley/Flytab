@@ -20,7 +20,7 @@ The legacy command IDs are retained to preserve saved bindings: switch-next togg
 
 ## Brand commitments
 
-Flytab uses a left arrow inside a horizontal tab-window outline, with a substantial charcoal-gray stroke and generous space around the arrow, sized to accompany Chrome navigation controls. Immediate previous-tab switching, with an optional small vertical list of favicons and titles. No letter labels or unnecessary settings.
+Flytab uses a left arrow inside a horizontal tab-window outline, with a substantial charcoal-gray stroke and generous space around the arrow, sized to accompany Chrome navigation controls. Immediate previous-tab switching, with an optional small vertical list of favicons and titles. No letter labels or unnecessary settings. The switcher should feel built into Chrome on macOS: list only, compact system typography, neutral light/dark colors, familiar blue selection, and no visible help footer or branded heading.
 
 ## Stack
 

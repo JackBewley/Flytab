@@ -57,7 +57,7 @@ test('release events retain each modifier state before the UI is ready', () => {
   assert.equal(events[2].shiftKey, false);
 });
 
-test('Cancel button keeps native Enter behavior', () => {
+test('native buttons keep their Enter behavior', () => {
   const { window, handlers } = capture();
   let prevented = false;
   handlers.keydown({ key: 'Enter', target: { closest: () => ({}) }, preventDefault: () => { prevented = true; } });

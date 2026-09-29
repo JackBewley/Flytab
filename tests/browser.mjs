@@ -251,25 +251,8 @@ try {
   assert.ok(!s.session.ids.includes(closed));
   assert.equal(await page.locator('[role=option]').count(),s.session.ids.length);
   pass('closed selection is removed from history and live popup');
-  await page.evaluate(()=>document.querySelector('#cancel').click());
+  await input(page,'Escape');
   assert.equal((await settled()).session,null);
-  pass('visible Cancel button is wired through external JavaScript');
-  await invoke(); page=await popup();
-  const beforeCancel=(await state()).order;
-  await page.locator('#cancel').focus();
-  assert.equal(await page.evaluate(()=>document.activeElement.id),'cancel');
-  const cancelledByEnter=page.waitForEvent('close');
-  try { await page.keyboard.press('Enter'); }
-  catch (error) {
-    // The native button activates on keydown and can close this target before
-    // Playwright sends keyup. Only tolerate that exact expected-close race;
-    // session/order checks below still prove cancellation instead of commit.
-    if (!page.isClosed() || !error.message.includes('Target page, context or browser has been closed')) throw error;
-  }
-  await cancelledByEnter;
-  assert.equal((await settled()).session,null);
-  assert.deepEqual((await state()).order,beforeCancel);
-  pass('Enter on focused Cancel cancels instead of activating a tab');
   await invoke(); page=await popup();
   const chosen=(await state()).session.ids[2];
   await page.evaluate(id=>document.getElementById('tab-'+id).click(),chosen);
@@ -335,8 +318,11 @@ try {
   if (evidence) {
     await mkdir(evidence,{recursive:true});
     await page.emulateMedia({colorScheme:'light'});
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    assert.ok(await page.evaluate(()=>document.documentElement.scrollHeight<=innerHeight), 'five rows fit without a second page scrollbar');
     await page.screenshot({path:join(evidence,'light.png')});
     await page.emulateMedia({colorScheme:'dark'});
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
     await page.screenshot({path:join(evidence,'dark.png')});
     const windowId=(await state()).session.windowId;
     await worker.evaluate(id=>chrome.windows.update(id,{width:320}),windowId);

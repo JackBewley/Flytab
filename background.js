@@ -161,9 +161,9 @@ async function openSwitcher(token, parent, useAction) {
     }
   }
   const popup = await chrome.windows.create({
-    url: popupURL(token), type: 'popup', focused: true, width: 440, height: 388,
-    left: Math.round((parent.left || 0) + Math.max(0, ((parent.width || 440) - 440) / 2)),
-    top: Math.round((parent.top || 0) + Math.max(0, ((parent.height || 388) - 388) / 3))
+    url: popupURL(token), type: 'popup', focused: true, width: 400, height: 216,
+    left: Math.round((parent.left || 0) + Math.max(0, ((parent.width || 400) - 400) / 2)),
+    top: Math.round((parent.top || 0) + Math.max(0, ((parent.height || 216) - 216) / 3))
   });
   if (!popup?.id) throw new Error('Chrome could not open the switcher.');
   return { kind: 'window', windowId: popup.id };

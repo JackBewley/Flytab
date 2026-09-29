@@ -3,7 +3,6 @@ const list = document.querySelector('#tabs');
 const error = document.querySelector('#error');
 const hint = document.querySelector('#hint');
 const empty = document.querySelector('#empty');
-const position = document.querySelector('#position');
 const early = window.flytabInput;
 const rows = new Map();
 let current = null;
@@ -61,8 +60,8 @@ function createRow(item, index, size) {
   row.title = item.title;
   const icon = document.createElement('img');
   icon.alt = '';
-  icon.width = 20;
-  icon.height = 20;
+  icon.width = 16;
+  icon.height = 16;
   icon.decoding = 'async';
   // Only the visible five rows need eager favicon work. The browser loads later
   // rows as scrolling brings them into view; no external URL is ever used.
@@ -78,14 +77,6 @@ function createRow(item, index, size) {
     detail.textContent = item.current ? 'Current' : 'Other window';
     row.append(detail);
   }
-  const mark = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-  mark.setAttribute('viewBox', '0 0 12 12');
-  mark.setAttribute('class', 'choice');
-  mark.setAttribute('aria-hidden', 'true');
-  const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-  path.setAttribute('d', 'm3 2 4 4-4 4');
-  mark.append(path);
-  row.append(mark);
   return row;
 }
 
@@ -127,9 +118,8 @@ function render(snapshot) {
   }
   if (!selectedRow) list.removeAttribute('aria-activedescendant');
   empty.hidden = snapshot.items.length > 1;
-  position.textContent = `${snapshot.items.length ? snapshot.index + 1 : 0} / ${snapshot.items.length}`;
   list.setAttribute('aria-busy', 'false');
-  hint.textContent = 'F next · Release modifiers to switch';
+  hint.textContent = 'F next. Release modifiers to switch. Enter selects. Escape cancels.';
 }
 
 async function commit(id) {
@@ -185,7 +175,6 @@ chrome.runtime.onMessage.addListener(message => {
   }
   if (message.type === 'flytab:state' && !finished) render(message.snapshot);
 });
-document.querySelector('#cancel').addEventListener('click', () => cancelNow());
 list.addEventListener('click', event => {
   const row = event.target.closest('.tab');
   if (row && list.contains(row)) sequence(() => commit(Number(row.dataset.tabId)));

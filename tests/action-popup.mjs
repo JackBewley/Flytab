@@ -127,7 +127,7 @@ await appendFile(join(extension, 'early-input.js'), String.raw`
       // A release/cancel can destroy this context; acknowledge before dispatch.
       respond({ ok: true });
       if (request.op === 'key') window.dispatchEvent(new KeyboardEvent(request.event.type, { bubbles: true, ...request.event }));
-      if (request.op === 'cancel') document.querySelector('#cancel').click();
+      if (request.op === 'cancel') window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
       if (request.op === 'click') document.getElementById('tab-' + request.id).click();
       if (request.op === 'blur') window.dispatchEvent(new Event('blur'));
       if (request.op === 'close') window.close();
@@ -277,9 +277,9 @@ try {
   assert.equal(view.inputReady, true);
   assert.equal(view.focused, true);
   assert.equal(view.activeElement, 'tabs');
-  assert.equal(view.width, 440);
-  assert.equal(view.listHeight, 240);
-  assert.equal(view.listMaxHeight, '240px');
+  assert.equal(view.width, 400);
+  assert.equal(view.listHeight, 160);
+  assert.equal(view.listMaxHeight, '160px');
   assert.ok(view.documentWidth <= view.width, 'long titles must not cause horizontal overflow');
   layout = { width: view.width, listHeight: view.listHeight, listMaxHeight: view.listMaxHeight, documentWidth: view.documentWidth };
   assert.equal(view.selected, `tab-${ids.destination}`);
@@ -340,7 +340,7 @@ try {
   await ui('cancel'); await closed();
   assert.deepEqual((await state()).order, baseline);
   await windowsSurvive(ids);
-  pass('Cancel closes the bubble without closing its source browser window');
+  pass('unmodified Escape closes the bubble without closing its source browser window');
   await invoke(); await inspect();
   await ui('blur'); await closed();
   assert.deepEqual((await state()).order, baseline);

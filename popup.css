@@ -1,19 +1,17 @@
 :root {
   color-scheme: light dark;
-  --surface: #f7f9fc;
-  --ink: #1e2c40;
-  --muted: #53647a;
-  --rule: #dce3ed;
-  --selected: #245cc5;
+  --surface: #ffffff;
+  --ink: #202124;
+  --muted: #5f6368;
+  --selected: #0063e1;
   --selected-ink: #ffffff;
-  --hover: #e7edf6;
-  --error: #a52833;
-  --focus: #245cc5;
-  --radius: 9px;
-  --row-height: 48px;
+  --hover: #f1f3f4;
+  --error: #b3261e;
+  --focus: #0063e1;
+  --radius: 4px;
+  --row-height: 32px;
   --body-font: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --utility-font: ui-monospace, "SFMono-Regular", Consolas, monospace;
-  font: 14px / 1.4 var(--body-font);
+  font: 13px / 1.4 var(--body-font);
   color: var(--ink);
   background: var(--surface);
   scrollbar-color: var(--muted) var(--surface);
@@ -21,47 +19,38 @@
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    --surface: #222b38;
-    --ink: #f0f4fa;
-    --muted: #b0bdd0;
-    --rule: #404e62;
-    --selected: #285db9;
-    --hover: #344256;
-    --error: #ffb1b7;
-    --focus: #aac9ff;
+    --surface: #292a2d;
+    --ink: #f1f3f4;
+    --muted: #bdc1c6;
+    --selected: #0a64d9;
+    --hover: #3c4043;
+    --error: #f2b8b5;
+    --focus: #a8c7fa;
   }
 }
 * { box-sizing: border-box; }
-html[data-surface="action"] body { width: 440px; box-sizing: border-box; }
-body { margin: 0; padding: 0 10px; min-width: 240px; }
-header { display: flex; justify-content: space-between; align-items: center; padding: 13px 8px 10px; gap: 16px; }
-h1 { display: flex; align-items: center; gap: 7px; margin: 0; font-size: 1rem; font-weight: 650; letter-spacing: -.02em; }
-h1 svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linejoin: round; stroke-linecap: round; }
-#position { color: var(--muted); font: .78rem var(--utility-font); font-variant-numeric: tabular-nums; }
+html[data-surface="action"] body { width: 400px; }
+body { margin: 0; padding: 6px; min-width: 240px; user-select: none; }
 #tabs { max-height: calc(5 * var(--row-height)); min-height: var(--row-height); overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; border-radius: var(--radius); }
 #tabs[aria-busy="true"] { min-height: calc(5 * var(--row-height)); }
-.tab { height: var(--row-height); display: flex; align-items: center; gap: 11px; padding: 0 12px; border-radius: var(--radius); cursor: pointer; }
+.tab { height: var(--row-height); display: flex; align-items: center; gap: 10px; padding: 0 10px; border-radius: var(--radius); cursor: default; }
 .tab:hover { background: var(--hover); }
 .tab[aria-selected="true"] { background: var(--selected); color: var(--selected-ink); }
-.tab img { width: 20px; height: 20px; flex-shrink: 0; object-fit: contain; border-radius: 3px; }
+.tab img { width: 16px; height: 16px; flex-shrink: 0; object-fit: contain; }
 .title { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.detail { font-size: .75rem; white-space: nowrap; color: var(--muted); }
+.detail { font-size: 11px; white-space: nowrap; color: var(--muted); }
 .tab[aria-selected="true"] .detail { color: var(--selected-ink); }
-.choice { width: 12px; height: 12px; flex-shrink: 0; visibility: hidden; fill: none; stroke: currentColor; stroke-width: 1.8; }
-.tab[aria-selected="true"] .choice { visibility: visible; }
-footer { padding: 10px 8px 8px; border-top: 1px solid var(--rule); margin-top: 8px; }
+/* The active option is the keyboard focus indicator, as in a native menu.
+   Retain the list outline while loading, before an option exists. */
+#tabs:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+#tabs:focus-visible[aria-activedescendant] { outline: none; }
 p { margin: 0; }
-#hint { font-size: .85rem; color: var(--muted); }
-.keys { display: flex; align-items: center; flex-wrap: wrap; gap: 14px; margin-top: 5px; color: var(--muted); font-size: .78rem; }
-kbd { font: .78rem var(--utility-font); color: var(--ink); }
-button { color: var(--muted); font: inherit; border: 0; background: transparent; border-radius: 4px; cursor: pointer; padding: 4px 6px; margin-left: auto; }
-button:hover { background: var(--hover); color: var(--ink); }
-button:active { background: var(--rule); }
-:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
-#empty, #error { padding: 12px; }
-#error { color: var(--error); overflow-wrap: anywhere; }
+#empty, #error { padding: 10px; }
+#error { color: var(--error); overflow-wrap: anywhere; user-select: text; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
 [hidden] { display: none !important; }
 ::selection { background: var(--selected); color: var(--selected-ink); }
 @media (forced-colors: active) {
-  .tab[aria-selected="true"] { outline: 2px solid Highlight; outline-offset: -2px; }
+  .tab[aria-selected="true"] { background: Highlight; color: HighlightText; forced-color-adjust: none; outline: 2px solid Highlight; outline-offset: -2px; }
+  .tab[aria-selected="true"] .detail { color: HighlightText; }
 }

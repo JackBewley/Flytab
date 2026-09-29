@@ -17,6 +17,7 @@ for (const name of ['manifest.json', 'background.js', 'core.js', 'early-input.js
 }
 await cp(join(source, 'icons'), join(extension, 'icons'), { recursive: true });
 await appendFile(join(extension, 'background.js'), '\nglobalThis.flytabTest = { command, enqueue, read };\n');
+await writeFile(join(extension, 'wake.html'), '<!doctype html><title>Flytab test wake</title>');
 const context = await chromium.launchPersistentContext(join(scratch, 'profile'), {
   executablePath: process.env.CHROME_PATH,
   headless: false, viewport: null,
@@ -35,7 +36,7 @@ async function invoke(name = 'switch-previous') {
 async function popup() {
   for (let i=0; i<50; i++) {
     const page=context.pages().find(page=>page.url().includes('popup.html'));
-    if (page) { await page.waitForFunction(()=>window.flytabInput?.handle && document.querySelector('#tabs').getAttribute('aria-busy')==='false'); return page; }
+    if (page) { await page.waitForFunction(()=>window.flytabInput?.handle && window.flytabInput.ownsCommands && document.querySelector('#tabs').getAttribute('aria-busy')==='false'); return page; }
     await pause(30);
   }
   throw new Error('Popup did not appear');
@@ -124,22 +125,22 @@ try {
   pass('F repeats and Shift+F both advance without activating a tab');
   // Keep the opening Option+Shift chord: every subsequent F goes forward.
   await input(page,'ƒ','keydown',{code:'KeyF',altKey:true,shiftKey:true});
-  assert.equal((await state()).session.index,4);
+  assert.equal((await state()).session.index,5);
   const length=(await state()).session.ids.length;
   for (let i=0;i<3;i++) {
-    await invoke('switch-previous');
-    assert.equal((await state()).session.index,(5+i)%length);
+    await input(page,'Ï','keydown',{code:'KeyF',altKey:true,shiftKey:true});
+    assert.equal((await state()).session.index,(6+i)%length);
     await input(page,'F','keyup',{code:'KeyF',altKey:true,shiftKey:true});
     assert.equal((await state()).session.token,token);
     assert.deepEqual((await state()).order,baseline);
   }
   pass('repeating the opening chord advances; F release keeps the held-modifier list open');
   const priorIndex=(await state()).session.index;
-  await invoke('switch-next');
+  await input(page,'ƒ','keydown',{code:'KeyF',altKey:true});
   assert.equal((await state()).session.index,(priorIndex+1)%length);
   assert.deepEqual((await state()).order,baseline);
-  pass('both registered commands advance through the same frozen list');
-  for (let i=0;i<length;i++) await invoke('switch-previous');
+  pass('both configured shortcuts advance through the same frozen list');
+  for (let i=0;i<length;i++) await input(page,'Ï','keydown',{code:'KeyF',altKey:true,shiftKey:true});
   assert.equal((await state()).session.index,(priorIndex+1)%length);
   assert.deepEqual((await state()).order,baseline);
   pass('repeating the opening chord wraps forward without changing MRU');
@@ -283,7 +284,7 @@ try {
   await input(page,'Escape');
   await invoke(); page=await popup();
   const beforeRelease=(await state()).order;
-  await invoke(); await invoke(); await invoke();
+  for (let i=0;i<3;i++) await input(page,'Ï','keydown',{code:'KeyF',altKey:true,shiftKey:true});
   const selected=(await state()).session.ids[(await state()).session.index];
   await input(page,'Alt','keyup',{shiftKey:true});
   assert.deepEqual((await state()).order,beforeRelease);
@@ -315,7 +316,8 @@ try {
   await cdp.send('ServiceWorker.stopWorker',{versionId:version.versionId});
   // Opening an extension page sends a message and wakes the worker.
   const wake=await context.newPage();
-  await wake.goto(worker.url().replace('background.js','popup.html?session=expired-test'));
+  await wake.goto(worker.url().replace('background.js','wake.html'));
+  await wake.evaluate(()=>chrome.runtime.sendMessage({type:'flytab:get',token:'expired-test'}));
   worker=context.serviceWorkers().find(w=>w.url().includes('background.js')) || await context.waitForEvent('serviceworker');
   for (let i=0;i<30;i++) { try { await state(); break; } catch { await pause(100); worker=context.serviceWorkers().find(w=>w.url().includes('background.js')); } }
   await pause(100);

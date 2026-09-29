@@ -5,6 +5,19 @@ const STATE_KEY = 'flytab';
 // This is only a mutex. All durable state is in storage.session, including the
 // frozen switcher order, so worker suspension cannot lose history or selection.
 let tail = Promise.resolve();
+// Only the live popup owns this transient lease. Durable MRU/session state stays
+// in storage; every new worker registers the global shortcuts synchronously.
+let inputOwner = null;
+function onCommand(name) {
+  if (['switch-next', 'switch-previous'].includes(name)) void enqueue(() => command(name));
+}
+function releaseInput(token) {
+  if (!inputOwner || inputOwner.token !== token) return false;
+  inputOwner = null;
+  chrome.commands.onCommand.addListener(onCommand);
+  return true;
+}
+
 function enqueue(operation) {
   const previous = tail;
   const result = (async () => {
@@ -112,6 +125,7 @@ async function canOpenAction() {
 
 async function closeSwitcher(session) {
   if (!session) return;
+  releaseInput(session.token);
   if (session.kind === 'action') {
     // An action popup belongs to its source browser window. Never remove that
     // window: ask only the extension document with this session token to close.
@@ -158,6 +172,7 @@ async function openSwitcher(token, parent, useAction) {
 async function cancel(state, restore = true) {
   const session = state.session;
   if (!session) return;
+  releaseInput(session.token);
   state.session = null;
   await save(state);
   await closeSwitcher(session);
@@ -167,6 +182,7 @@ async function cancel(state, restore = true) {
 }
 
 async function activate(state, destinationId, sourceId) {
+  releaseInput(state.session?.token);
   const destination = await chrome.tabs.get(destinationId);
   if (!eligible(destination, ORIGIN)) throw new Error('That tab is no longer available.');
   // Activate before focusing: avoids putting the destination window's old
@@ -222,6 +238,7 @@ async function command(name) {
       try { contexts = await actionContexts(state.session); } catch { /* Reopen below. */ }
       if (!contexts.length || parent.id !== state.session.sourceWindowId) {
         const previous = state.session;
+        releaseInput(previous.token);
         state.session = null;
         await save(state);
         await closeSwitcher(previous);
@@ -229,7 +246,7 @@ async function command(name) {
     } else if (parent.id !== state.session.windowId) {
       // A native popup's focused window proves it is alive; otherwise validate.
       try { await chrome.windows.get(state.session.windowId); }
-      catch { state.session = null; await save(state); }
+      catch { releaseInput(state.session.token); state.session = null; await save(state); }
     }
   }
   if (state?.session) {
@@ -269,6 +286,7 @@ async function command(name) {
     // Toolbar cosmetics must not delay the popup's queued initial state request.
     void chrome.action.setBadgeText({ text: '' }).catch(() => {});
   } catch (error) {
+    releaseInput(token);
     // Even if history preparation fails first, wait for and close any window
     // created concurrently. Do not leave an orphan with an unbound token.
     const popup = await opening.catch(() => null);
@@ -283,13 +301,12 @@ async function command(name) {
   }
 }
 
-async function message(request, sender) {
+async function authorizeSession(state, token, sender) {
   if (sender.id !== chrome.runtime.id || !sender.url?.startsWith(ORIGIN + 'popup.html')) {
-    throw new Error('Unknown Flytab page.');
+    return false;
   }
-  const { state, tabs } = await read();
   const session = state.session;
-  let authorized = session && session.token === request.token &&
+  let authorized = session && session.token === token &&
     sender.url === popupURL(session.token, session.kind);
   if (authorized && session.kind === 'action') {
     // Chrome's action sender may omit both tab and documentId, and its POPUP
@@ -320,6 +337,13 @@ async function message(request, sender) {
   } else if (authorized) {
     authorized = sender.tab?.windowId === session.windowId;
   }
+  return authorized;
+}
+
+async function message(request, sender) {
+  const { state, tabs } = await read();
+  const session = state.session;
+  const authorized = await authorizeSession(state, request.token, sender);
   if (!authorized) {
     return { ok: false, expired: true, error: 'This switcher has closed. Open Flytab again.' };
   }
@@ -337,6 +361,7 @@ async function message(request, sender) {
     return { ok: true, snapshot: await snapshot(state, tabs) };
   }
   if (request.type === 'flytab:commit') {
+    releaseInput(session.token);
     const id = request.id ?? session.ids[session.index];
     if (!session.ids.includes(id)) throw new Error('That tab has closed. Choose another tab.');
     await activate(state, id, session.sourceId);
@@ -354,8 +379,55 @@ chrome.runtime.onMessage.addListener((request, sender, respond) => {
   return true;
 });
 
-chrome.commands.onCommand.addListener(name => {
-  if (['switch-next', 'switch-previous'].includes(name)) void enqueue(() => command(name));
+chrome.commands.onCommand.addListener(onCommand);
+
+chrome.runtime.onConnect.addListener(port => {
+  if (!port.name?.startsWith('flytab-input:')) return;
+  const connection = { port, token: port.name.slice('flytab-input:'.length), disconnected: false };
+  const disconnect = () => {
+    try { port.disconnect(); } catch { /* The document is already gone. */ }
+  };
+  port.onDisconnect.addListener(() => {
+    connection.disconnected = true;
+    if (inputOwner !== connection) return;
+    // Restore first, even if persistence or popup cleanup subsequently fails.
+    releaseInput(connection.token);
+    void enqueue(async () => {
+      const state = await eventState();
+      if (state.session?.token === connection.token) await cancel(state, false);
+    });
+  });
+  port.onMessage.addListener(request => {
+    // A visible popup sends this every 20s. Port traffic, not polling or an
+    // idle background timer, keeps its input lease alive during a long hold.
+    if (inputOwner !== connection || request?.type !== 'flytab:input-alive') return;
+  });
+  void enqueue(async () => {
+    const state = await eventState();
+    if (connection.disconnected) return;
+    if (!await authorizeSession(state, connection.token, port.sender) || connection.disconnected) {
+      disconnect();
+      return;
+    }
+    // A second connection must not silently replace an existing lease. The UI
+    // disconnects before retrying after a failed commit or a lost worker.
+    if (inputOwner) { disconnect(); return; }
+    inputOwner = connection;
+    chrome.commands.onCommand.removeListener(onCommand);
+    try {
+      // Modified shortcuts now go directly to the popup. Browser-handled
+      // accelerators would suppress the following modifier keyups in Chromium.
+      port.postMessage({ type: 'flytab:input-ready' });
+    } catch (error) {
+      releaseInput(connection.token);
+      disconnect();
+      await cancel(state, false);
+      throw error;
+    }
+  }).catch(() => {
+    if (inputOwner === connection) releaseInput(connection.token);
+    disconnect();
+  });
 });
 
 chrome.action.onClicked.addListener(() => { void enqueue(quickSwitch); });
@@ -442,7 +514,11 @@ chrome.tabs.onReplaced.addListener((addedId, removedId) => {
 chrome.windows.onRemoved.addListener(windowId => {
   void enqueue(async () => {
     const state = await eventState();
-    if (state.session?.windowId === windowId) { state.session = null; await save(state); }
+    if (state.session?.windowId === windowId) {
+      releaseInput(state.session.token);
+      state.session = null;
+      await save(state);
+    }
   });
 });
 

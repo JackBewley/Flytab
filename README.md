@@ -9,7 +9,7 @@ Jump straight back to the Chrome tab you were just on, across windows. A minimal
 3. **Pin Flytab** from Chrome's Extensions menu for the fastest switcher opening and the toolbar shortcut.
 4. Open `chrome://extensions/shortcuts`. Confirm **Switch to previous tab** is **Option+F** and **Open recent tabs** is **Option+Shift+F** on macOS. If it is blank or conflicts with another shortcut, assign one. Keep its scope **In Chrome**.
 
-After updating, click **Reload** on Flytab's extension card and confirm version **0.4.0**. Existing shortcut assignments are preserved; check the shortcuts page if you previously remapped them. No separate app is needed.
+After updating, click **Reload** on Flytab's extension card and confirm version **0.4.1**. Existing shortcut assignments are preserved; check the shortcuts page if you previously remapped them. No separate app is needed.
 
 ## Use
 
@@ -38,6 +38,8 @@ The five-row list scrolls through the full MRU history, with the starting tab la
 Both registered shortcuts move forward while the list is open. Plain F and Shift+F also move forward; releasing F when no modifiers are held commits. Other desktop platforms default to **Alt+Q / Alt+Shift+Q** to avoid Chrome's menu shortcut. Commands remain remappable: hold your configured modifiers while repeating the list shortcut, then release them to select. “Global MRU” means across Chrome windows, not a system-wide keyboard hook.
 
 ## Chrome's release-event limit
+
+While the list is open, Flytab handles its configured shortcuts inside the popup so Chrome does not swallow the following key releases. Flytab’s normal shortcuts are restored when the list closes. An unexpected interruption of the background worker cancels the open list safely; MRU history remains available.
 
 The popup captures releases as its first synchronous script and buffers them while the rest of its UI loads. It checks the actual modifier flags on release events instead of guessing with a timeout. Once the list is open and receiving keys, the intended interaction is hold, cycle, release to select.
 

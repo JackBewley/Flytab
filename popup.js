@@ -137,16 +137,25 @@ async function commit(id) {
   finished = true;
   try {
     await request('commit', id == null ? {} : { id });
+    early.release();
     window.close();
   }
-  catch (problem) { finished = false; throw problem; }
+  catch (problem) {
+    finished = false;
+    if (early.disconnected || early.blurred) {
+      cancelNow(false);
+      return;
+    }
+    await early.reclaim();
+    throw problem;
+  }
 }
 
 async function cancel(restore = true) {
   if (finished) return;
   finished = true;
   try { await request('cancel', { restore }); }
-  finally { window.close(); }
+  finally { early.release(); window.close(); }
 }
 
 // Cancellation must stay available even if the initial worker request stalls.
@@ -170,6 +179,7 @@ async function input(event) {
 chrome.runtime.onMessage.addListener(message => {
   if (message.type === 'flytab:close' && message.token === token) {
     finished = true;
+    early.release();
     window.close();
     return;
   }
@@ -200,11 +210,11 @@ list.addEventListener('wheel', event => {
 // The early listener also catches window blur during module loading. Never
 // steal focus back or replay a buffered release after the user leaves.
 early.handle = event => {
-  if (event.type === 'blur') cancelNow(false);
+  if (event.type === 'blur' || event.type === 'disconnect') cancelNow(false);
   else if (event.type === 'keydown' && event.key === 'Escape') cancelNow();
   else sequence(() => input(event));
 };
-if (early.blurred) {
+if (early.blurred || early.disconnected) {
   early.pending.length = 0;
   cancelNow(false);
 } else {

@@ -71,14 +71,27 @@ for (const [object, name, label] of [
     return result;
   };
 }
-const addCommand = chrome.commands.onCommand.addListener.bind(chrome.commands.onCommand);
-chrome.commands.onCommand.addListener = listener => {
+const commandEvent = chrome.commands.onCommand;
+const addCommand = commandEvent.addListener.bind(commandEvent);
+const removeCommand = commandEvent.removeListener.bind(commandEvent);
+const hasCommand = commandEvent.hasListener.bind(commandEvent);
+const commandWrappers = new WeakMap();
+commandEvent.addListener = listener => {
   flytabBench.command = listener;
-  return addCommand((...args) => {
-    flytabBench.marks.commandDispatch = flytabBench.now();
-    return listener(...args);
-  });
+  let wrapped = commandWrappers.get(listener);
+  if (!wrapped) {
+    wrapped = (...args) => {
+      flytabBench.marks.commandDispatch = flytabBench.now();
+      return listener(...args);
+    };
+    commandWrappers.set(listener, wrapped);
+  }
+  return addCommand(wrapped);
 };
+// Production temporarily removes its named listener during popup input ownership.
+// Preserve callback identity instead of leaving an instrumented listener behind.
+commandEvent.removeListener = listener => removeCommand(commandWrappers.get(listener) || listener);
+commandEvent.hasListener = listener => hasCommand(commandWrappers.get(listener) || listener);
 `;
 await writeFile(join(extension, 'background.js'), workerProbe + await readFile(join(extension, 'background.js'), 'utf8'));
 await appendFile(join(extension, 'background.js'), `
@@ -104,15 +117,31 @@ await appendFile(join(extension, 'early-input.js'), `
 // Self-reporting covers toolbar bubbles, which are not Playwright Page targets.
 (() => {
   const now = () => performance.timeOrigin + performance.now();
-  const probe = window.flytabStartupProbe = {inputReady:now(), focusedAtInputReady:document.hasFocus(), focusEvents:[]};
+  const probe = window.flytabStartupProbe = {inputReady:now(), focusedAtInputReady:document.hasFocus(), focusEvents:[],
+    requiresCommandHandoff:'ownsCommands' in window.flytabInput};
   let reported = false;
   const report = () => {
-    if (reported || !probe.listReady || !probe.inputAndFocusReady || !probe.readyAnimationFrame || !document.hasFocus()) return;
+    if (reported || !probe.listReady || !probe.inputAndFocusReady || !probe.readyAnimationFrame || !document.hasFocus() ||
+      (probe.requiresCommandHandoff && !probe.commandHandoffReady)) return;
     reported = true;
     probe.documentFocused = document.hasFocus();
     // One telemetry message, only after every measured readiness milestone.
     void chrome.runtime.sendMessage({type:'flytab-benchmark:probe',probe:{...probe}}).catch(()=>{});
   };
+  // Reclaim waits for shortcut lookup, so this synchronous probe can observe
+  // the ownership connection before it is created without changing its lifetime.
+  if (probe.requiresCommandHandoff) {
+    const connect = chrome.runtime.connect.bind(chrome.runtime);
+    chrome.runtime.connect = (...args) => {
+      const port = connect(...args);
+      if (port.name.startsWith('flytab-input:')) port.onMessage.addListener(message => {
+        if (message.type !== 'flytab:input-ready') return;
+        probe.commandHandoffReady ??= now();
+        report();
+      });
+      return port;
+    };
+  }
   if (document.hasFocus()) probe.inputAndFocusReady = probe.inputReady;
   window.addEventListener('focus', event => {
     const detail = {at:now(),target:event.target === window ? 'window' : 'element',documentFocused:document.hasFocus()};
@@ -274,6 +303,8 @@ try {
             dispatchToInputAndFocusReady:popupProbe.inputAndFocusReady ? round(popupProbe.inputAndFocusReady-mark.commandDispatch) : null,
             dispatchToListReady:round(popupProbe.listReady-mark.commandDispatch),
             dispatchToInteractiveReady:round(Math.max(popupProbe.listReady,popupProbe.inputAndFocusReady)-mark.commandDispatch),
+            dispatchToCommandHandoffReady:popupProbe.commandHandoffReady ? round(popupProbe.commandHandoffReady-mark.commandDispatch) : null,
+            dispatchToFullyReady:round(Math.max(popupProbe.listReady,popupProbe.inputAndFocusReady,popupProbe.commandHandoffReady || 0)-mark.commandDispatch),
             controllerToInputReady:round(popupProbe.inputReady-mark.controllerSent),
             controllerToInputAndFocusReady:round(popupProbe.inputAndFocusReady-mark.controllerSent),
             controllerToListReady:round(popupProbe.listReady-mark.controllerSent),
@@ -308,6 +339,8 @@ try {
       'Toolbar action bubbles do not appear as Playwright Pages, so the popup reports one telemetry message after its listener, focus and rendered-list milestones. The same probe is used for both UI mechanisms.',
       'The legacy windowCreate/createCall metric keys refer to the actual UI-opening API: windows.create or action.openPopup, recorded as openingApi/mechanism. Input-ready and focus-ready must be distinguished for toolbar bubbles.',
       'Controller sends an extension message that invokes the registered command callback. This is not a physical keyboard test.',
+      'Command-event probes preserve add/remove/hasListener callback identity so production input ownership can unregister and restore its real listener.',
+      'When production uses a popup input-ownership port, command handoff readiness is marked at its authenticated ready acknowledgement. Fully-ready timing includes that milestone as well as list and document focus. Baselines without that protocol have a null handoff marker.',
       'Dispatch-based timing begins inside the worker immediately before the registered command callback; it excludes Playwright transport and physical OS/Chrome shortcut delivery.',
       'Controller-based timing additionally includes extension message transport and worker wake on restarted samples. Restarted mode explicitly stops the worker using CDP before each sample.',
       'Input readiness is marked immediately after the synchronous early-input script installs listeners. Focus readiness is the first observed focused document with those listeners installed; it is not proof of physical key delivery.',

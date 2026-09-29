@@ -28,24 +28,79 @@ await writeFile(join(scratch, 'profile', 'Default', 'Preferences'), JSON.stringi
 }));
 // Capture the actual registered callbacks rather than reproducing their logic.
 const workerProbe = String.raw`
-const flytabActionTest = globalThis.flytabActionTest = { started: Date.now(), errors: [], requests: [] };
+const flytabActionTest = globalThis.flytabActionTest = { started: Date.now(), errors: [], requests: [], denials: [], nativeCommands: [] };
 for (const [event, name] of [[chrome.commands.onCommand, 'command'], [chrome.action.onClicked, 'toolbar']]) {
   const add = event.addListener.bind(event);
-  event.addListener = callback => { flytabActionTest[name] = callback; return add(callback); };
+  const remove = event.removeListener.bind(event);
+  const has = event.hasListener.bind(event);
+  const wrappers = new WeakMap();
+  event.addListener = callback => {
+    flytabActionTest[name] = callback;
+    let wrapped = wrappers.get(callback);
+    if (!wrapped) {
+      wrapped = (...args) => {
+        if (name === 'command') flytabActionTest.nativeCommands.push(args[0]);
+        return callback(...args);
+      };
+      wrappers.set(callback, wrapped);
+    }
+    flytabActionTest[name + 'Listener'] = wrapped;
+    return add(wrapped);
+  };
+  // Preserve production callback identity during the popup's command handoff.
+  event.removeListener = callback => remove(wrappers.get(callback) || callback);
+  event.hasListener = callback => has(wrappers.get(callback) || callback);
 }
-chrome.runtime.onMessage.addListener((request, sender) => {
+chrome.runtime.onMessage.addListener((request, sender, respond) => {
   if (request?.type === 'flytab:get') flytabActionTest.requests.push({ request, sender });
   if (request?.type === 'flytab-action-test:error') flytabActionTest.errors.push(request.error);
+  if (request?.type === 'flytab-action-test:wake') respond({ ok: true });
 });
+const addMessage = chrome.runtime.onMessage.addListener.bind(chrome.runtime.onMessage);
+chrome.runtime.onMessage.addListener = callback => addMessage((request, sender, respond) =>
+  callback(request, sender, response => {
+    if (request?.type === 'flytab:commit' && sender.tab) {
+      flytabActionTest.denials.push({ token: request.token, tabId: sender.tab.id, response });
+    }
+    respond(response);
+  }));
 `;
 await writeFile(join(extension, 'background.js'), workerProbe + await readFile(join(extension, 'background.js'), 'utf8'));
-await appendFile(join(extension, 'background.js'), '\nflytabActionTest.drain = () => enqueue(async () => {});\nflytabActionTest.contexts = actionContexts;\n');
+await appendFile(join(extension, 'background.js'), '\nflytabActionTest.drain = () => enqueue(async () => {});\nflytabActionTest.contexts = actionContexts;\nflytabActionTest.disconnectInput = () => inputOwner?.port.disconnect();\n');
 // Toolbar bubbles are not always Playwright Page targets. Inspect and dispatch
 // through private runtime hooks in this copy, while exercising production input.
 await appendFile(join(extension, 'early-input.js'), String.raw`
 ;(() => {
   const token = new URL(location.href).searchParams.get('session');
   let rememberedRows = null;
+  let inputPort = null;
+  let inputReady = false;
+  let holdCommit = false;
+  let rejectCommit = null;
+  const sendMessage = chrome.runtime.sendMessage.bind(chrome.runtime);
+  chrome.runtime.sendMessage = (...args) => {
+    if (holdCommit && args[0]?.type === 'flytab:commit') {
+      return new Promise((resolve, reject) => { rejectCommit = reject; });
+    }
+    return sendMessage(...args);
+  };
+  const connect = chrome.runtime.connect.bind(chrome.runtime);
+  chrome.runtime.connect = (...args) => {
+    const port = connect(...args);
+    if (port.name === 'flytab-input:' + token) {
+      inputPort = port;
+      port.onMessage.addListener(message => {
+        if (message.type === 'flytab:input-ready') inputReady = true;
+      });
+      port.onDisconnect.addListener(() => { inputReady = false; });
+    }
+    return port;
+  };
+  // Try a forged commit from an ordinary extension tab before its invalid input
+  // port closes it. Observe the production denial in the worker, not a dead Page.
+  void chrome.tabs.getCurrent().then(tab => {
+    if (tab) return chrome.runtime.sendMessage({ type: 'flytab:commit', token }).catch(() => {});
+  });
   window.addEventListener('error', event => {
     void chrome.runtime.sendMessage({ type: 'flytab-action-test:error', error: event.message }).catch(() => {});
   });
@@ -59,7 +114,7 @@ await appendFile(join(extension, 'early-input.js'), String.raw`
       const rows = [...document.querySelectorAll('[role=option]')];
       if (request.op === 'inspect' || request.op === 'remember') {
         if (request.op === 'remember') rememberedRows = rows;
-        respond({ ok: true, token, ready: Boolean(window.flytabInput.handle) && list?.getAttribute('aria-busy') === 'false',
+        respond({ ok: true, token, inputReady, commitPending: Boolean(rejectCommit), disconnected: window.flytabInput.disconnected, ready: inputReady && Boolean(window.flytabInput.handle) && list?.getAttribute('aria-busy') === 'false',
           width: innerWidth, documentWidth: document.documentElement.scrollWidth, listHeight: list?.getBoundingClientRect().height,
           listMaxHeight: list && getComputedStyle(list).maxHeight,
           busy: list?.getAttribute('aria-busy'), focused: document.hasFocus(), activeElement: document.activeElement?.id,
@@ -76,6 +131,9 @@ await appendFile(join(extension, 'early-input.js'), String.raw`
       if (request.op === 'click') document.getElementById('tab-' + request.id).click();
       if (request.op === 'blur') window.dispatchEvent(new Event('blur'));
       if (request.op === 'close') window.close();
+      if (request.op === 'disconnect') inputPort.disconnect();
+      if (request.op === 'holdCommit') holdCommit = true;
+      if (request.op === 'rejectCommit') rejectCommit(new Error('Test: connection lost before commit delivery'));
     })().catch(problem => respond({ ok: false, error: problem.message }));
     return true;
   });
@@ -128,11 +186,17 @@ async function inspect() {
   }
   throw new Error('Action popup did not become ready');
 }
+async function commandsListening() {
+  return await worker.evaluate(() => chrome.commands.onCommand.hasListener(flytabActionTest.commandListener));
+}
 async function popupContexts() { return await worker.evaluate(() => chrome.runtime.getContexts({ contextTypes: ['POPUP'] })); }
 async function closed() {
   for (let i = 0; i < 100; i++) {
     await drain();
-    if (!(await state()).session && !(await popupContexts()).length) return;
+    if (!(await state()).session && !(await popupContexts()).length) {
+      assert.equal(await commandsListening(), true, 'closing any surface must restore browser command routing');
+      return;
+    }
     await pause(20);
   }
   throw new Error('Popup/session did not close');
@@ -209,6 +273,8 @@ try {
   assert.equal(s.session.kind, 'action');
   assert.equal(s.session.windowId, ids.window1);
   assert.ok(s.session.documentId, 'real POPUP context bound to session');
+  assert.equal(await commandsListening(), false, 'focused popup owns keys instead of browser accelerators');
+  assert.equal(view.inputReady, true);
   assert.equal(view.focused, true);
   assert.equal(view.activeElement, 'tabs');
   assert.equal(view.width, 440);
@@ -221,6 +287,8 @@ try {
   assert.equal(await worker.evaluate(() => chrome.action.getPopup({})), '');
   pass('pinned command opens a focused action bubble at previous MRU without creating a browser window');
   await ui('remember');
+  // A callback already queued during handoff remains a valid one-step command;
+  // this direct callback invocation is explicitly not native routing evidence.
   await invoke();
   view = await inspect();
   s = await state();
@@ -228,13 +296,20 @@ try {
   assert.equal(view.selected, `tab-${s.session.ids[1]}`);
   assert.equal(view.sameRows, true);
   assert.equal(view.selectedCount, 1);
-  await key('ƒ', 'keydown', { code: 'KeyF', altKey: true, shiftKey: true });
-  assert.equal((await state()).session.index, 1);
-  await key('F', 'keyup', { code: 'KeyF', altKey: true, shiftKey: true });
+  await key('Ï', 'keydown', { code: 'KeyF', altKey: true, shiftKey: true });
+  assert.equal((await state()).session.index, 2);
+  await key('Ï', 'keyup', { code: 'KeyF', altKey: true, shiftKey: true });
+  assert.equal((await state()).session.index, 2);
   assert.deepEqual((await state()).order, baseline);
-  for (let i = 0; i < s.session.ids.length; i++) await invoke();
-  assert.equal((await state()).session.index, 1);
-  pass('commands cycle and wrap without rebuilding rows; held F release never commits or mutates MRU');
+  for (let i = 0; i < s.session.ids.length; i++) {
+    await key('Ï', 'keydown', { code: 'KeyF', altKey: true, shiftKey: true });
+    await key('Ï', 'keyup', { code: 'KeyF', altKey: true, shiftKey: true });
+  }
+  assert.equal((await state()).session.index, 2);
+  view = await inspect();
+  assert.equal(view.sameRows, true);
+  assert.equal(await commandsListening(), false);
+  pass('owned modified F cycles exactly once and wraps; held F release preserves the list and MRU');
   await key('Escape', 'keydown', { altKey: true, shiftKey: true });
   await closed();
   assert.deepEqual((await state()).order, baseline);
@@ -242,6 +317,12 @@ try {
   pass('Escape with modifiers held closes only the action bubble');
   for (const first of ['Shift', 'Alt']) {
     await invoke(); await inspect();
+    const cycleLength = (await state()).session.ids.length;
+    for (let i = 0; i < cycleLength; i++) {
+      await key('Ï', 'keydown', { code: 'KeyF', altKey: true, shiftKey: true });
+      await key('Ï', 'keyup', { code: 'KeyF', altKey: true, shiftKey: true });
+    }
+    assert.equal((await state()).session.index, 0);
     await key(first, 'keyup', { altKey: first === 'Shift', shiftKey: first === 'Alt' });
     assert.ok((await state()).session);
     assert.deepEqual((await state()).order, baseline);
@@ -266,10 +347,34 @@ try {
   await windowsSurvive(ids);
   pass('focus loss cancels an action bubble without committing');
   await invoke(); await inspect();
+  await ui('disconnect'); await closed();
+  assert.deepEqual((await state()).order, baseline);
+  await windowsSurvive(ids);
+  pass('unexpected input-port disconnect cancels safely and restores global commands');
+  await invoke(); await inspect();
+  await ui('holdCommit');
+  await key('Enter');
+  assert.equal((await ui('inspect')).commitPending, true, 'commit is held before reaching the worker');
+  // Disconnect the real worker endpoint so the popup receives onDisconnect.
+  // Reject the undelivered commit afterward to exercise its recovery path.
+  await worker.evaluate(() => flytabActionTest.disconnectInput());
+  let lostInput;
+  for (let i = 0; i < 100; i++) {
+    lostInput = await ui('inspect');
+    if (lostInput.disconnected) break;
+    await pause(20);
+  }
+  assert.equal(lostInput.disconnected, true);
+  await ui('rejectCommit'); await closed();
+  assert.deepEqual((await state()).order, baseline);
+  await windowsSurvive(ids);
+  pass('a commit rejected after input disconnection cancels safely without changing MRU');
+  await invoke(); await inspect();
   const dismissedToken = (await state()).session.token;
   await ui('close');
   for (let i = 0; i < 100 && (await popupContexts()).length; i++) await pause(20);
   assert.equal((await popupContexts()).length, 0);
+  await closed();
   await invoke(); await inspect();
   assert.notEqual((await state()).session.token, dismissedToken);
   assert.equal((await state()).session.index, 0);
@@ -280,28 +385,35 @@ try {
   const actionUrl = (await popupContexts()).find(item => item.documentUrl.includes(knownToken)).documentUrl;
   const impostorId = await worker.evaluate(async ({ windowId, url }) => (await chrome.tabs.create({ windowId, url, active: false })).id,
     { windowId: ids.window1, url: actionUrl });
-  let impostor;
+  let denied;
   for (let i = 0; i < 100; i++) {
-    impostor = context.pages().find(page => page.url() === actionUrl);
-    if (impostor) break;
+    denied = await worker.evaluate(({ token, tabId }) => flytabActionTest.denials.find(entry => entry.token === token && entry.tabId === tabId),
+      { token: knownToken, tabId: impostorId });
+    if (denied) break;
     await pause(20);
   }
-  assert.ok(impostor, 'background extension tab available');
-  const denied = await impostor.evaluate(token => chrome.runtime.sendMessage({ type: 'flytab:commit', token }), knownToken);
-  assert.equal(denied.ok, false);
+  assert.ok(denied, 'ordinary extension tab attempted a real runtime commit');
+  assert.equal(denied.response.ok, false);
   assert.equal((await state()).session.token, knownToken);
   assert.deepEqual((await state()).order, baseline);
-  await worker.evaluate(id => chrome.tabs.remove(id), impostorId);
+  assert.equal(await commandsListening(), false, 'rejected impostor port must not release the actual popup lease');
+  await worker.evaluate(id => chrome.tabs.remove(id).catch(() => {}), impostorId);
   await windowsSurvive(ids);
-  pass('a normal extension tab with the correct popup URL/token cannot authenticate or commit');
+  pass('an ordinary tab with the live URL/token cannot commit or disturb the real popup input lease');
   await key('Escape'); await closed();
-  // Force an actual worker restart while the action document remains alive.
+  // A forced worker/port disconnect must cancel; a stale popup must never
+  // continue claiming input while a new worker has re-registered accelerators.
   const cdp = await context.newCDPSession(controller);
   const versions = new Map();
-  cdp.on('ServiceWorker.workerVersionUpdated', event => { for (const version of event.versions) versions.set(version.versionId, version); });
+  const stoppedVersions = new Set();
+  cdp.on('ServiceWorker.workerVersionUpdated', event => {
+    for (const version of event.versions) {
+      versions.set(version.versionId, version);
+      if (version.runningStatus === 'stopped') stoppedVersions.add(version.versionId);
+    }
+  });
   await cdp.send('ServiceWorker.enable');
   await invoke(); await inspect();
-  const coldToken = (await state()).session.token;
   const priorStarted = await worker.evaluate(() => flytabActionTest.started);
   errors.push(...await worker.evaluate(() => flytabActionTest.errors));
   let version;
@@ -312,18 +424,25 @@ try {
   }
   assert.ok(version, 'running worker version available');
   await cdp.send('ServiceWorker.stopWorker', { versionId: version.versionId });
-  for (let i = 0; i < 100 && versions.get(version.versionId)?.runningStatus !== 'stopped'; i++) await pause(20);
-  assert.equal(versions.get(version.versionId)?.runningStatus, 'stopped');
-  // Controller-to-popup dispatch does not depend on a live worker object.
-  assert.equal((await ui('key', { event: { key: 'Shift', type: 'keyup' } }, coldToken)).ok, true);
+  for (let i = 0; i < 100 && !stoppedVersions.has(version.versionId); i++) await pause(20);
+  assert.ok(stoppedVersions.has(version.versionId), 'old worker stopped');
+  for (let i = 0; i < 100; i++) {
+    const contexts = await controller.evaluate(() => chrome.runtime.getContexts({ contextTypes: ['POPUP'] }));
+    if (!contexts.length) break;
+    await pause(20);
+  }
+  assert.equal((await controller.evaluate(() => chrome.runtime.getContexts({ contextTypes: ['POPUP'] }))).length, 0);
+  await controller.evaluate(() => chrome.runtime.sendMessage({ type: 'flytab-action-test:wake' }));
   await liveWorker();
   assert.ok(await worker.evaluate(prior => flytabActionTest.started > prior, priorStarted));
   await closed();
-  assert.deepEqual((await state()).order.slice(0, 2), [ids.destination, ids.source]);
+  assert.deepEqual((await state()).order, baseline);
   await windowsSurvive(ids);
-  pass('release from an existing authenticated action popup commits after a real worker restart');
+  await invoke('switch-next');
+  assert.deepEqual((await settle()).order.slice(0, 2), [ids.destination, ids.source]);
   await invoke('switch-next');
   assert.deepEqual((await settle()).order, baseline);
+  pass('forced worker disconnect cancels the active list; global toggling works after wake');
   // The actual onClicked callback is exercised, while physical pointer delivery
   // remains a separate native check. Empty popup configuration is asserted too.
   assert.equal(await worker.evaluate(() => chrome.action.getPopup({})), '');
@@ -358,7 +477,7 @@ try {
   assert.deepEqual(errors, []);
   pass('action popup reports no uncaught page errors');
   const report = { browser: context.browser().version(), version: manifest.version, passed: results.length, results, layout, screenshot,
-    methodology: 'Real production extension in a disposable pinned profile. Commands invoke registered callbacks; key releases are injected DOM events, not physical held-key evidence. Source/destination windows checked after commits and cancellation.', errors };
+    methodology: 'Real production extension in a disposable pinned profile. Open commands invoke registered callbacks; modified F and releases are injected DOM events, not native routing or physical held-key evidence. Actual command-listener ownership/restoration and input-port lifecycle are checked. Source/destination windows checked after commits and cancellation.', errors };
   console.log(JSON.stringify(report, null, 2));
   if (process.env.FLYTAB_EVIDENCE) {
     await mkdir(process.env.FLYTAB_EVIDENCE, { recursive: true });

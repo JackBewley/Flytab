@@ -15,7 +15,11 @@ function harness() {
   const origin = 'chrome-extension://flytab/';
   const calls = [];
   const listeners = {};
-  const event = name => ({ addListener(fn) { listeners[name] = fn; } });
+  const event = name => ({
+    addListener(fn) { listeners[name] = fn; },
+    removeListener(fn) { if (listeners[name] === fn) delete listeners[name]; },
+    hasListener(fn) { return listeners[name] === fn; }
+  });
   let state = { version: 1, order: [1, 2, 3], session: null };
   let tabs = [
     { id: 1, windowId: 10, active: true, title: 'Source', url: 'https://one.example' },
@@ -66,7 +70,7 @@ function harness() {
     runtime: {
       id: 'flytab', getURL: path => origin + path,
       sendMessage: record('runtime.sendMessage', async () => {}),
-      onMessage: event('message'), onInstalled: event('installed'), onStartup: event('startup')
+      onConnect: event('connect'), onMessage: event('message'), onInstalled: event('installed'), onStartup: event('startup')
     },
     action: {
       setPopup: record('action.setPopup', async () => {}),
@@ -208,4 +212,25 @@ test('simultaneous closed tabs cannot shift the visible selection away from the 
   assert.equal(view.items[view.index].id, 3);
   const reconciled = await h.controller.read();
   assert.equal(reconciled.state.session.ids[reconciled.state.session.index], 3);
+});
+
+test('native popup input ownership uses the same exact sender binding and restores on window closure', async () => {
+  const h = harness(); const commandHandler = h.listeners.command;
+  await h.controller.command('switch-previous');
+  const token = h.state.session.token;
+  let onDisconnect;
+  const messages = [];
+  const port = {
+    name:'flytab-input:' + token, sender:h.sender(token),
+    onDisconnect:{addListener(fn) {onDisconnect = fn;}},
+    onMessage:{addListener() {}}, postMessage(message) {messages.push(message);}, disconnect() {}
+  };
+  h.listeners.connect(port); await h.controller.enqueue(async () => {});
+  assert.equal(h.listeners.command,undefined);
+  assert.equal(messages[0]?.type,'flytab:input-ready');
+  h.listeners.windowRemoved(12); await h.controller.enqueue(async () => {});
+  assert.equal(h.listeners.command,commandHandler);
+  assert.equal(h.state.session,null);
+  onDisconnect(); await h.controller.enqueue(async () => {});
+  assert.equal(h.listeners.command,commandHandler);
 });

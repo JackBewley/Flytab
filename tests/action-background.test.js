@@ -18,7 +18,11 @@ function harness() {
   const tabs = [{id:1, windowId:10, active:true, url:'https://source.example'},
     {id:2, windowId:10, active:false, url:'https://previous.example'}];
   let state = {version:1, order:[1,2], session:null}, popup = '', documentSequence = 0;
-  const event = name => ({addListener(fn) {listeners[name] = fn;}});
+  const event = name => ({
+    addListener(fn) {listeners[name] = fn;},
+    removeListener(fn) {if (listeners[name] === fn) delete listeners[name];},
+    hasListener(fn) {return listeners[name] === fn;}
+  });
   const record = (name, fn) => async (...args) => {calls.push({name,args}); return await fn(...args);};
   const chrome = {
     storage: {session: {
@@ -30,7 +34,10 @@ function harness() {
     }},
     tabs: {
       query: record('tabs.query', async () => faults.query ? await faults.query.promise : structuredClone(tabs)),
-      get: record('tabs.get', async id => structuredClone(tabs.find(tab => tab.id === id))),
+      get: record('tabs.get', async id => {
+        if (faults.tabGet) await faults.tabGet.promise;
+        return structuredClone(tabs.find(tab => tab.id === id));
+      }),
       update: record('tabs.update', async (id, properties) => {
         if (properties.active) for (const tab of tabs) tab.active = tab.id === id;
         return Object.assign(tabs.find(tab => tab.id === id), properties);
@@ -48,17 +55,20 @@ function harness() {
     },
     runtime: {
       id:'flytab', getURL:path => origin + path,
-      getContexts: record('runtime.getContexts', async filter => structuredClone(contexts.filter(context =>
+      getContexts: record('runtime.getContexts', async filter => {
+        if (faults.auth) await faults.auth.promise;
+        return structuredClone(contexts.filter(context =>
         filter.contextTypes.includes(context.contextType) &&
         (!filter.documentIds || filter.documentIds.includes(context.documentId)) &&
-        (!filter.documentUrls || filter.documentUrls.includes(context.documentUrl))))),
+        (!filter.documentUrls || filter.documentUrls.includes(context.documentUrl))));
+      }),
       sendMessage: record('runtime.sendMessage', async message => {
         if (message.type === 'flytab:close') {
           const index = contexts.findIndex(context => new URL(context.documentUrl).searchParams.get('session') === message.token);
           if (index !== -1) contexts.splice(index,1);
         }
       }),
-      onMessage:event('message'), onInstalled:event('installed'), onStartup:event('startup')
+      onConnect:event('connect'), onMessage:event('message'), onInstalled:event('installed'), onStartup:event('startup')
     },
     action: {
       getUserSettings: record('action.getUserSettings', async () => ({isOnToolbar:!faults.unpinned})),
@@ -73,10 +83,15 @@ function harness() {
     },
     commands:{onCommand:event('command')}
   };
-  const context = {...core,chrome,URL,crypto:{randomUUID},console:{error() {}}};
+  let context;
   const code = readFileSync(new URL('../background.js',import.meta.url),'utf8').replace(/^import .*?;\n/,'');
-  vm.runInNewContext(code+'\nglobalThis.controller = {command,enqueue,message};',context);
-  return {calls,contexts,faults,windows,listeners,chrome,controller:context.controller,
+  const restartWorker = () => {
+    context = {...core,chrome,URL,crypto:{randomUUID},console:{error() {}}};
+    vm.runInNewContext(code+'\nglobalThis.controller = {command,enqueue,message};',context);
+  };
+  restartWorker();
+  return {calls,contexts,faults,windows,listeners,chrome,restartWorker,
+    get controller() {return context.controller;},
     get state() {return state;}, get popup() {return popup;},
     open:() => context.controller.enqueue(() => context.controller.command('switch-previous')),
     sender:() => ({id:'flytab',origin:origin.slice(0,-1),url:contexts[0].documentUrl,documentId:contexts[0].documentId})};
@@ -235,4 +250,192 @@ test('failed action opening does not steal focus with native fallback after the 
   assert.equal(h.calls.some(call => call.name === 'windows.remove'),false);
   assert.equal(h.popup,'');
   assert.equal(h.state.session,null);
+});
+
+function popupPort(h, {sender = h.sender(), token = h.state.session.token, failPost = false} = {}) {
+  const callbacks = {};
+  return {
+    name:'flytab-input:' + token, sender, messages:[], disconnected:false,
+    onDisconnect:{addListener(fn) {callbacks.disconnect = fn;}},
+    onMessage:{addListener(fn) {callbacks.message = fn;}},
+    postMessage(message) {
+      if (failPost) throw Error('Popup disappeared');
+      this.messages.push(message);
+    },
+    disconnect() {this.disconnected = true;},
+    close() {this.disconnected = true; callbacks.disconnect?.();},
+    heartbeat() {callbacks.message?.({type:'flytab:input-alive'});}
+  };
+}
+async function claimInput(h, options) {
+  const port = popupPort(h,options);
+  h.listeners.connect(port);
+  await h.controller.enqueue(async () => {});
+  return port;
+}
+
+test('authenticated popup owns modified shortcuts until disconnect restores the exact registered handler', async () => {
+  const h = harness(); const commandHandler = h.listeners.command;
+  await h.open();
+  h.contexts[0].windowId = -1;
+  const sender = h.sender(); delete sender.documentId;
+  const port = await claimInput(h,{sender});
+  assert.equal(h.listeners.command,undefined);
+  assert.deepEqual(port.messages.map(message => message.type),['flytab:input-ready']);
+  const order = Array.from(h.state.order);
+  h.calls.length = 0; port.heartbeat();
+  assert.equal(h.calls.length,0);
+  port.close();
+  assert.equal(h.listeners.command,commandHandler); // Restoration precedes queued storage work.
+  await h.controller.enqueue(async () => {});
+  assert.equal(h.state.session,null);
+  assert.deepEqual(Array.from(h.state.order),order);
+  assert.equal(h.windows.has(10),true);
+});
+
+test('forged, stale and duplicate ports cannot steal input ownership or cancel the live switcher', async () => {
+  const h = harness(); await h.open(); const token = h.state.session.token;
+  const commandHandler = h.listeners.command;
+  for (const options of [
+    {sender:{...h.sender(),tab:{windowId:10}}},
+    {sender:{...h.sender(),origin:'https://impostor.example'}},
+    {sender:{...h.sender(),documentId:'impostor'}},
+    {token:'stale'}
+  ]) {
+    const port = await claimInput(h,options);
+    assert.equal(port.disconnected,true);
+    assert.equal(port.messages.length,0);
+    assert.equal(h.listeners.command,commandHandler);
+    assert.equal(h.state.session.token,token);
+  }
+  const owner = await claimInput(h);
+  const duplicate = await claimInput(h);
+  assert.equal(duplicate.disconnected,true);
+  assert.equal(h.listeners.command,undefined);
+  duplicate.close();
+  await h.controller.enqueue(async () => {});
+  assert.equal(h.state.session.token,token);
+  assert.equal(h.listeners.command,undefined);
+  owner.close();
+  await h.controller.enqueue(async () => {});
+  assert.equal(h.listeners.command,commandHandler);
+});
+
+test('port disconnect while authentication is pending never suspends shortcuts afterward', async () => {
+  const h = harness(); await h.open(); const commandHandler = h.listeners.command;
+  h.faults.auth = deferred();
+  const port = popupPort(h); h.listeners.connect(port); await tick();
+  port.close(); h.faults.auth.resolve();
+  await h.controller.enqueue(async () => {});
+  assert.equal(h.listeners.command,commandHandler);
+  assert.equal(port.messages.length,0);
+});
+
+test('a popup lost while acknowledging ownership restores shortcuts and cancels without activating', async () => {
+  const h = harness(); await h.open(); const commandHandler = h.listeners.command;
+  const port = await claimInput(h,{failPost:true});
+  assert.equal(port.disconnected,true);
+  assert.equal(h.listeners.command,commandHandler);
+  assert.equal(h.state.session,null);
+  assert.deepEqual(Array.from(h.state.order),[1,2]);
+  assert.equal(h.windows.has(10),true);
+});
+
+test('commit restores shortcuts before tab activation awaits and failed commit can reclaim its lease', async () => {
+  const h = harness(); await h.open(); const commandHandler = h.listeners.command;
+  const token = h.state.session.token, sender = h.sender();
+  const firstPort = await claimInput(h);
+  h.faults.tabGet = deferred();
+  const commit = h.controller.enqueue(() => h.controller.message({type:'flytab:commit',token},sender));
+  const rejected = assert.rejects(commit,/Tab unavailable/);
+  await tick();
+  assert.equal(h.listeners.command,commandHandler);
+  h.faults.tabGet.reject(Error('Tab unavailable')); await rejected;
+  delete h.faults.tabGet;
+  firstPort.close();
+  const replacement = await claimInput(h);
+  assert.equal(replacement.messages[0]?.type,'flytab:input-ready');
+  assert.equal(h.listeners.command,undefined);
+  assert.equal(h.state.session.token,token);
+  await h.controller.message({type:'flytab:commit',token},sender);
+  assert.equal(h.listeners.command,commandHandler);
+  assert.equal(h.state.session,null);
+  assert.deepEqual(Array.from(h.state.order),[2,1]);
+});
+
+test('a late old-port disconnect cannot restore shortcuts or cancel a newer popup', async () => {
+  const h = harness(); await h.open();
+  const oldPort = await claimInput(h);
+  await h.controller.message({type:'flytab:cancel',token:h.state.session.token},h.sender());
+  await h.open(); const newToken = h.state.session.token;
+  const newPort = await claimInput(h);
+  oldPort.close(); await h.controller.enqueue(async () => {});
+  assert.equal(h.listeners.command,undefined);
+  assert.equal(h.state.session.token,newToken);
+  assert.equal(newPort.disconnected,false);
+  newPort.close(); await h.controller.enqueue(async () => {});
+  assert.equal(typeof h.listeners.command,'function');
+});
+
+test('cancellation storage failure still restores shortcuts and leaves a recoverable session', async () => {
+  const h = harness(); await h.open(); await claimInput(h);
+  const token = h.state.session.token;
+  h.faults.saveOnce = true;
+  await assert.rejects(h.controller.message({type:'flytab:cancel',token},h.sender()),/Save failed/);
+  assert.equal(typeof h.listeners.command,'function');
+  assert.equal(h.state.session.token,token);
+  await h.controller.message({type:'flytab:cancel',token},h.sender());
+  assert.equal(h.state.session,null);
+  assert.equal(h.windows.has(10),true);
+});
+
+test('a queued early port authenticates only after the opening has durably bound its popup', async () => {
+  const h = harness(); h.faults.open = deferred();
+  const opening = h.open(); await tick();
+  const path = h.calls.find(call => call.name === 'action.setPopup' && call.args[0].popup).args[0].popup;
+  const url = 'chrome-extension://flytab/' + path;
+  const token = new URL(url).searchParams.get('session');
+  const port = popupPort(h,{token,sender:{id:'flytab',origin:'chrome-extension://flytab',url}});
+  h.listeners.connect(port);
+  await tick();
+  assert.equal(typeof h.listeners.command,'function');
+  assert.equal(port.messages.length,0);
+  h.faults.open.resolve(); await opening;
+  await h.controller.enqueue(async () => {});
+  assert.equal(h.state.session.token,token);
+  assert.equal(h.state.session.documentId,h.contexts[0].documentId);
+  assert.equal(h.listeners.command,undefined);
+  assert.equal(port.messages[0]?.type,'flytab:input-ready');
+});
+
+test('pending port cannot suspend shortcuts after opening fails', async () => {
+  const h = harness(); h.faults.open = deferred(); h.faults.saveOnce = true;
+  const commandHandler = h.listeners.command;
+  const opening = h.open(); const rejected = assert.rejects(opening,/Save failed/);
+  await tick();
+  const path = h.calls.find(call => call.name === 'action.setPopup' && call.args[0].popup).args[0].popup;
+  const url = 'chrome-extension://flytab/' + path;
+  const port = popupPort(h,{token:new URL(url).searchParams.get('session'),
+    sender:{id:'flytab',origin:'chrome-extension://flytab',url}});
+  h.listeners.connect(port);
+  h.faults.open.resolve(); await rejected;
+  await h.controller.enqueue(async () => {});
+  assert.equal(port.disconnected,true);
+  assert.equal(port.messages.length,0);
+  assert.equal(h.listeners.command,commandHandler);
+  assert.equal(h.state.session,null);
+});
+
+test('worker restart synchronously restores shortcuts and accepts safe cancellation of its old session', async () => {
+  const h = harness(); await h.open(); await claimInput(h);
+  const token = h.state.session.token, sender = h.sender();
+  assert.equal(h.listeners.command,undefined);
+  h.restartWorker();
+  assert.equal(typeof h.listeners.command,'function');
+  assert.equal(h.state.session.token,token);
+  const response = await h.controller.enqueue(() => h.controller.message({type:'flytab:cancel',token,restore:false},sender));
+  assert.equal(response.ok,true);
+  assert.equal(h.state.session,null);
+  assert.deepEqual(Array.from(h.state.order),[1,2]);
+  assert.equal(typeof h.listeners.command,'function');
 });

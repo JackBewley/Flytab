@@ -1,6 +1,6 @@
 # Flytab verification
 
-Version **0.4.0**, tested September 29, 2026 on macOS with isolated **Google Chrome for Testing 151.0.7922.34** profiles. Tests do not modify the user's ordinary Chrome profile. The approved v0.3.3 icon is unchanged.
+Version **0.4.1**, tested September 29, 2026 on macOS with isolated **Google Chrome for Testing 153.0.8010.52** profiles. Tests do not modify the user's ordinary Chrome profile. The approved v0.3.3 icon is unchanged.
 
 ## Interaction under test
 
@@ -10,31 +10,37 @@ Pinned Flytab opens a toolbar popup on supported Chrome; unpinned or unavailable
 
 ## Automated coverage
 
-**38 unit tests, 31 native-window browser checks, and 15 pinned-toolbar browser checks passed.** No popup page errors were observed. Results and screenshots are kept locally in `test-evidence/0.4.0/`, excluded from Git and distribution packages. Startup measurements and their limits are in [PERFORMANCE.md](PERFORMANCE.md).
+**54 unit tests, 31 native-window browser checks, and 17 pinned-toolbar browser checks passed.** No popup page errors were observed. Results and screenshots are kept locally in `test-evidence/0.4.1/`, excluded from Git and distribution packages. Startup measurements and their limits are in [PERFORMANCE.md](PERFORMANCE.md).
 
 Both browser suites load the real extension into a temporary copy with private command/input hooks. They exercise production callbacks and DOM handlers; injected events do not establish physical-key delivery reliability.
 
 Shared behavior coverage includes:
 
-- Repeated opening commands advance one step and wrap; modified F is not counted twice. Preview keeps MRU frozen.
+- Once open, the popup owns its configured shortcuts and the background command listener is suspended. Modified F advances exactly one step and wraps; preview keeps MRU frozen. Closing restores the normal shortcuts.
 - F keyup with Option+Shift still down does not commit. Both modifier-release orders commit only after the last modifier is up, focus the chosen window, and place the source at MRU #2.
 - Escape works with modifiers held. Cancel, Enter, row clicks, arrows, wheel, closed-tab removal, immediate toggling, background-created tabs, and worker restart are covered.
 - Existing rows and favicons are reused during selection changes. Buffered early releases wait for data. Escape and focus setup work while the initial response is delayed; a received blur event during loading discards buffered commits (an injected-event check).
 - No received release means no timer-based guess. Enter remains a fallback.
 
-The action-popup suite additionally validates real Chrome sender/context shapes, rejects an ordinary extension tab using the live popup URL/token, recovers from external dismissal, and checks that commits/cancellation never remove the source or destination browser window. The actual popup is 440px wide with a 240px five-row list and no horizontal overflow with a long title; a screenshot was inspected.
+The action-popup suite covers unexpected input-Port loss, interruption during a pending commit, safe cancellation after a real worker stop, and restored shortcuts after every closing path. It additionally validates real Chrome sender/context shapes, rejects an ordinary extension tab using the live popup URL/token, recovers from external dismissal, and checks that commits/cancellation never remove the source or destination browser window. The actual popup is 440px wide with a 240px five-row list and no horizontal overflow with a long title; a screenshot was inspected.
 
 Unit coverage includes MRU rules, input buffering/modifier flags, parallel startup sequencing, no-op storage reads, failed opening/query/write cleanup, source closure during opening, simultaneous tab closures, incremental lifecycle updates, unsupported/unpinned fallback, temporary toolbar configuration, and real action-popup identity/focus conventions.
 
 ## Native macOS observations and limits
 
-The following physical-routing observations are retained from v0.3.0. The v0.4.0 suites above use synthetic input; they are not new physical held-key measurements.
+The user reported that v0.4.0’s held/repeated shortcut required Enter despite its passing injected-release tests. Native tracing on Chrome 151 and 153 reproduced the routing problem: opening/repeating the chord invoked browser command callbacks, while the focused popup received no DOM key events. Removing the command listener in a disposable experiment immediately restored trusted modified-F keydown and keyup events. Chromium’s browser accelerator handling suppresses subsequent keyups; injecting a DOM event bypassed that failure.
 
-The native UI-automation shortcut opened the list with C selected from source B. Repeating Option+Shift+F advanced to A, confirming Shift no longer reverses. The popup's captured DOM event trace remained empty for these automated modified chords, so **that native test did not verify release-to-commit**. The automation API sends complete chords and does not provide independent physical modifier hold/release controls.
+With v0.4.1 on Chrome 153, the opening used one native command callback, and three subsequent Option+Shift+F presses reached the popup as trusted DOM events and advanced exactly three entries. MRU remained unchanged during preview. The popup retained ownership during a pause longer than 35 seconds. An external app-focus change correctly cancelled it and restored shortcuts.
 
-An unmodified native F press advanced one more entry and its release committed without Enter. A subsequent native Option+F immediately returned to B. This verifies an actual unmodified key-release commit and the primary toggle, but does not establish continuous physical Option+Shift holding.
+In a fresh sequence, two modified F presses followed by an unmodified native F press advanced and committed Project notes on key release without Enter. Native Option+F then immediately returned to Source. The full traces and concise before/after proof are saved with the local evidence.
 
-The full held-modifier interaction and both release orders passed injected-event browser tests. The manual sequence below is still needed on the user's keyboard. Extremely fast opening taps can release everything before Chrome creates/focuses the popup; those events cannot be recovered. This was observed in the original prototype and confirmed by the user's physical-keyboard test. No timer guesses whether keys are held.
+**The automation tool sends complete chords and cannot independently hold/release modifier keys.** Both final modifier-release orders passed injected-event tests after cycling, but continuous physical Option+Shift holding still needs the manual keyboard sequence below. Extremely fast opening taps can release everything before the popup receives input; those events remain unrecoverable. No timer guesses whether modifiers are held.
+
+## Input ownership and recovery
+
+The popup loads Chrome’s configured shortcut strings, accepting macOS glyphs and named modifiers, then claims an authenticated runtime Port. Background command handling pauses only for that live popup. This lets F presses and following modifier releases reach the DOM without duplicate navigation. A local liveness message runs every 20 seconds only while the picker is focused and visible; it never commits or reads physical key state and stops on close.
+
+Commit, cancellation, closing, and connection loss restore global shortcuts. An unexpected worker interruption cancels the open picker; MRU history survives. Tests cover a connection loss during an in-flight commit, failed-commit reclaim, opening failures, stale/disconnected/forged claims, and late callbacks from an older session.
 
 ## Run tests
 
@@ -56,7 +62,7 @@ Use Chrome for Testing or Chromium, which accept automated unpacked-extension lo
 
 ## Manual check
 
-1. Reload Flytab and verify version **0.4.0**. Pin its icon. Confirm Option+F is **Switch to previous tab** and Option+Shift+F is **Open recent tabs** in `chrome://extensions/shortcuts`.
+1. Reload Flytab and verify version **0.4.1**. Pin its icon. Confirm Option+F is **Switch to previous tab** and Option+Shift+F is **Open recent tabs** in `chrome://extensions/shortcuts`.
 2. Visit tabs in two windows, then quickly tap Option+F several times. Your two most recent tabs should alternate immediately without a popup. Repeat after the extension has been idle.
 3. Hold Option+Shift and tap F. The list should open beneath the pinned icon. Keep BOTH modifiers held and tap F several more times. Every tap must move forward; releasing F between taps must leave the list open. Keep cycling to check wrapping.
 4. Release Shift while keeping Option held: it should stay open. Release Option: the highlighted tab should activate and the list close. Repeat with Option released first, then Shift. Test left/right Option and Shift keys.

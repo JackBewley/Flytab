@@ -54,11 +54,11 @@ One flat list within Chrome’s toolbar bubble or the fallback native OS frame. 
 
 ## Components
 
-The authored listbox in popup.js presents selection; background.js owns frozen order and selected index. Hold Option+Shift and press F to open, then keep both modifiers held while tapping F to move forward. Shift never reverses F. Release both modifiers to commit and close; releasing F while modifiers remain held does not commit. Both registered commands advance within the list and wrap. Escape/cancel closes without committing, including while modifiers are held. Enter/click remain available if Chrome misses release before popup focus. Arrows without modifiers and the wheel also preview. Outside the list, Option+F immediately toggles; the toolbar remains an immediate toggle.
+The authored listbox in popup.js presents selection; background.js owns frozen order and selected index. Hold Option+Shift and press F to open, then keep both modifiers held while tapping F to move forward. Shift never reverses F. Release both modifiers to commit and close; releasing F while modifiers remain held does not commit. Both configured shortcuts advance within the list and wrap. The popup handles these chords directly while it owns input, preventing Chrome’s accelerator handling from swallowing modifier releases; normal shortcut routing resumes on close. Escape/cancel closes without committing, including while modifiers are held. Enter/click remain available if Chrome misses release before popup focus. Arrows without modifiers and the wheel also preview. Outside the list, Option+F immediately toggles; the toolbar remains an immediate toggle.
 
 ARIA active descendant follows the selected option. Focus starts on the listbox before the initial data response; actual blur during loading cancels rather than refocusing. Selection-only updates reuse the same rows and favicons. Input capture and the initial state request precede styles/UI loading. Tab can reach Cancel, where Enter activates the native button. Pointer hover does not alter selection. The footer explains forward F navigation and release to switch. No animation delays keyboard input.
 
-Loading reserves five rows. Empty state explains that another tab must be visited. Inline errors use an ARIA alert and allow Escape; expired windows can be closed. No modal alerts or confirmation dialogs.
+Loading reserves five rows. Empty state explains that another tab must be visited. Inline errors use an ARIA alert and allow Escape; expired windows can be closed. If the background input connection unexpectedly disappears, the picker cancels safely. No modal alerts or confirmation dialogs.
 
 ## Do's and Don'ts
 

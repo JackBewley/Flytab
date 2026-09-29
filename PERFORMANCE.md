@@ -2,6 +2,25 @@
 
 The goal is to make the switcher receive keyboard input sooner while keeping the immediate Option+F toggle, frozen preview order, release-to-select behavior, and existing permissions. A release that occurs before Chrome focuses the extension document is still unrecoverable.
 
+## Modifier-release correction in v0.4.1
+
+Native testing after the user’s report revealed a separate issue: Chromium suppresses keyups after processing a browser-handled shortcut in the popup. The v0.4.0 injected-event tests exercised the release handler but bypassed that native routing failure. v0.4.1 temporarily removes the background command listener only while an authenticated popup Port owns input, allowing the popup to handle configured chords directly. Closing, committing, cancelling, or losing the connection restores the global shortcuts. This retains the pinned opening route; it does not infer release from elapsed time.
+
+A 20-second local Port message runs only while the picker is focused and visible, preventing ordinary worker-idle termination during a long selection. Unexpected worker termination cancels the picker safely. There is no activity from this mechanism once it closes.
+
+Primary-source diagnosis: [Chromium 153 keyup suppression](https://raw.githubusercontent.com/chromium/chromium/153.0.8010.53/content/browser/renderer_host/render_widget_host_impl.cc), [command dispatch requires an event listener](https://chromium.googlesource.com/chromium/src/+/refs/heads/main/chrome/browser/extensions/extension_keybinding_registry.cc).
+
+## v0.4.1 startup regression check
+
+A bounded comparison used Chrome for Testing **153.0.8010.52** with the pinned icon and nine total MRU entries: five warm and three restarted-worker openings per version, **16 measured openings** total. The baseline was frozen commit `8c0616e` (v0.4.0). Readiness includes document focus and rendered rows, plus the input-ownership acknowledgement in v0.4.1.
+
+| Worker | v0.4.0 median | v0.4.1 median |
+|---|---:|---:|
+| Warm | 36.2 ms | 37.2 ms |
+| Restarted | 40.2 ms | 36.3 ms |
+
+Ownership was acknowledged in every new-version sample, usually 0.1–0.5 ms after list readiness. This small check found no substantial startup slowdown; it is not a new broad performance claim. Do not compare these Chrome 153 numbers directly with the larger Chrome 151 study below. Evidence and runtime hashes are under `test-evidence/0.4.1/`.
+
 ## Implementation
 
 - Resolve durable state and the live source window concurrently. The source is resolved when a queued command runs; the optional event tab can be stale after rapid toggles.
@@ -22,7 +41,7 @@ Times distinguish command dispatch, Chrome's opening call, installed input liste
 
 These are controlled comparative measurements on one Mac with Chrome for Testing 151.0.7922.34, not a physical fast-tap reliability study. Both runs use a test controller page and debugger connection; blank fixtures exclude website and favicon loading. Tail timings and native focus scheduling vary. Raw evidence is kept locally under test-evidence/0.4.0 and excluded from Git/packages. Browser-process memory and physical key-release success rates were not measured.
 
-## Final production results
+## v0.4.0 production results
 
 The comparison contains **150 measured openings**: 50 from the frozen v0.3.3 baseline, 50 from the final pinned v0.4.0 path, and 50 from the final unpinned v0.4.0 path. Both new paths used identical runtime source hashes, actual browser pin settings, and the production worker/UI with development probes. No popup errors were reported.
 
@@ -53,7 +72,7 @@ Other approaches were rejected:
 
 - A retained minimized window keeps an OS window and renderer alive and still needs a focus transition. Chrome exposes no genuinely hidden reusable window state.
 - An offscreen document cannot receive physical releases because it cannot be focused; it would also add a permission and memory use.
-- Keeping the worker alive wastes background activity and does not remove Chrome's document-focus delay.
+- Keeping the worker alive while the picker is closed wastes background activity and does not remove Chrome's document-focus delay. v0.4.1 uses a small Port liveness message only during a visible, focused picker session to preserve input ownership; it stops entirely on close.
 - A timer cannot distinguish an already-released chord from a user still holding the keys while reading.
 - Changing to an always-visible side panel or injecting into websites changes the interaction/permission model.
 - Minification or a framework/build pipeline would target small local files rather than the measured dominant delay.

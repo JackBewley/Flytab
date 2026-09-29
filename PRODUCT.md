@@ -20,7 +20,7 @@ The legacy command IDs are retained to preserve saved bindings: switch-next togg
 
 ## Brand commitments
 
-Flytab uses a left arrow inside a horizontal tab-window outline, with a substantial charcoal-gray stroke and generous space around the arrow, sized to accompany Chrome navigation controls. Immediate previous-tab switching, with an optional small vertical list of favicons and titles. No letter labels or unnecessary settings. The switcher should feel like a polished desktop utility within Chrome’s squared extension-popup frame: quiet Recent tabs header and position count, title/site hierarchy, neutral light/dark colors, restrained selection and a checkmark. No visible help footer or branded heading. Chrome’s own rounded popup frame cannot be reproduced through extension CSS.
+Flytab uses a left arrow inside a horizontal tab-window outline, with a substantial charcoal-gray stroke and generous space around the arrow, sized to accompany Chrome navigation controls. Immediate previous-tab switching, with an optional small vertical list of favicons and titles. No letter labels or unnecessary settings. The switcher should feel like a polished desktop utility within Chrome’s squared extension-popup frame: quiet Recent tabs header and position count, title/window hierarchy, neutral light/dark colors, restrained selection and a right arrow. No visible help footer or branded heading. Chrome’s own rounded popup frame cannot be reproduced through extension CSS.
 
 ## Stack
 

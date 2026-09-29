@@ -9,7 +9,7 @@ Jump straight back to the Chrome tab you were just on, across windows. A minimal
 3. **Pin Flytab** from Chrome's Extensions menu for the fastest switcher opening and the toolbar shortcut.
 4. Open `chrome://extensions/shortcuts`. Confirm **Switch to previous tab** is **Option+F** and **Open recent tabs** is **Option+Shift+F** on macOS. If it is blank or conflicts with another shortcut, assign one. Keep its scope **In Chrome**.
 
-After updating, click **Reload** on Flytab's extension card and confirm version **0.5.0**. Existing shortcut assignments are preserved; check the shortcuts page if you previously remapped them. No separate app is needed.
+After updating, click **Reload** on Flytab's extension card and confirm version **0.5.1**. Existing shortcut assignments are preserved; check the shortcuts page if you previously remapped them. No separate app is needed.
 
 ## Use
 
@@ -59,7 +59,7 @@ At startup/installation, Flytab seeds from open tabs sorted by `lastAccessed`, w
 
 ## Switcher appearance
 
-The rectangular panel has a Recent tabs header, position count, and five visible rows. Each row shows a title and site label; the checkmark marks the selected destination. Site labels omit URL credentials, paths, queries and fragments. Light and dark appearances follow the system. There is no visible help footer; Escape cancels and Enter remains a fallback.
+The rectangular panel has a Recent tabs header, position count, and five visible rows. Each row shows a larger title and Current window or Other window; the source is labeled Current tab. A right arrow marks the selected destination. Light and dark appearances follow the system. There is no visible help footer; Escape cancels and Enter remains a fallback.
 
 Chrome controls the outer extension-popup frame and does not expose its corner shape to Flytab. The panel is designed for that rectangular frame.
 

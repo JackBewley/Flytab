@@ -75,25 +75,16 @@ function createRow(item, index, size) {
   copy.className = 'copy';
   const meta = document.createElement('span');
   meta.className = 'meta';
-  const site = document.createElement('span');
-  site.className = 'site';
-  site.textContent = item.site || 'Browser tab';
-  meta.append(site);
+  meta.textContent = item.current ? 'Current tab' : item.otherWindow ? 'Other window' : 'Current window';
   copy.append(title, meta);
   row.append(icon, copy);
-  if (item.current || item.otherWindow) {
-    const detail = document.createElement('span');
-    detail.className = 'detail';
-    detail.textContent = item.current ? 'Current' : 'Other window';
-    meta.append(detail);
-  }
   const choice = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
   choice.setAttribute('class', 'choice');
   choice.setAttribute('viewBox', '0 0 16 16');
   choice.setAttribute('aria-hidden', 'true');
-  const check = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-  check.setAttribute('d', 'm3.5 8 3 3 6-6');
-  choice.append(check);
+  const arrow = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  arrow.setAttribute('d', 'M3 8h10M9 4l4 4-4 4');
+  choice.append(arrow);
   row.append(choice);
   return row;
 }
@@ -101,7 +92,7 @@ function createRow(item, index, size) {
 function sameItems(items, previous) {
   return previous && items.length === previous.length && items.every((item, index) => {
     const before = previous[index];
-    return item.id === before.id && item.title === before.title && item.icon === before.icon && item.site === before.site &&
+    return item.id === before.id && item.title === before.title && item.icon === before.icon &&
       item.current === before.current && item.otherWindow === before.otherWindow;
   });
 }

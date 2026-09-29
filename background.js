@@ -1,4 +1,4 @@
-import { eligible, promote, commitOrder, reconstruct, step, pruneSession, siteLabel } from './core.js';
+import { eligible, promote, commitOrder, reconstruct, step, pruneSession } from './core.js';
 
 const ORIGIN = chrome.runtime.getURL('');
 const STATE_KEY = 'flytab';
@@ -71,7 +71,6 @@ async function snapshot(state, knownTabs) {
   const items = session.ids.map(id => byId.get(id)).filter(Boolean).map(tab => ({
     id: tab.id,
     title: tab.title || 'Untitled tab',
-    site: siteLabel(tab.url),
     // Never load tab.favIconUrl: it can be a remote resource. The extension's
     // _favicon endpoint is Chrome's local cache, with a generic fallback.
     icon: cachedIcon(tab),

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { eligible, promote, commitOrder, reconstruct, step, pruneSession, siteLabel } from '../core.js';
+import { eligible, promote, commitOrder, reconstruct, step, pruneSession } from '../core.js';
 
 test('startup orders lastAccessed, then puts the focused active tab first', () => {
   assert.deepEqual(reconstruct([
@@ -39,14 +39,4 @@ test('incognito and Flytab UI are ineligible', () => {
 
 test('promoting an existing tab deduplicates visits', () => {
   assert.deepEqual(promote([2, 1, 3], 1), [1, 2, 3]);
-});
-
-test('site labels expose only a hostname, never URL credentials or private paths', () => {
-  assert.equal(siteLabel('https://name:secret@www.example.com/private?token=secret#fragment'), 'example.com');
-  assert.equal(siteLabel('file:///Users/name/private.pdf'), 'Local file');
-  assert.equal(siteLabel('chrome://settings/people'), 'Chrome');
-  assert.equal(siteLabel('chrome-extension://private-id/options.html'), 'Extension');
-  assert.equal(siteLabel('data:text/html,private content'), 'Browser tab');
-  assert.equal(siteLabel('invalid'), 'Browser tab');
-  assert.equal(siteLabel(undefined), 'Browser tab');
 });

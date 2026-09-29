@@ -1,7 +1,7 @@
 // Test-only harness: loads a temporary COPY with private controller hooks.
 // The shipping extension has no test hooks, automation APIs or dependencies.
 import assert from 'node:assert/strict';
-import { mkdtemp, cp, appendFile, rm, mkdir, writeFile } from 'node:fs/promises';
+import { mkdtemp, cp, appendFile, rm, mkdir, writeFile, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -99,12 +99,20 @@ try {
   assert.equal(s.session.ids[s.session.index],ids.destination);
   assert.deepEqual(s.order,baseline);
   assert.ok((await page.locator('#hint').textContent()).includes('Release'));
+  await page.evaluate(()=>{ window.flytabTestRows=[...document.querySelectorAll('[role=option]')]; });
   await input(page,'ArrowDown');
   assert.equal((await state()).session.index,1);
   await input(page,'ArrowUp');
   assert.equal((await state()).session.index,0);
   assert.deepEqual((await state()).order,baseline);
   pass('arrows preview without changing MRU');
+  assert.ok(await page.evaluate(()=>{
+    const rows=[...document.querySelectorAll('[role=option]')];
+    return rows.length===window.flytabTestRows.length &&
+      rows.every((row,index)=>row===window.flytabTestRows[index]) &&
+      document.querySelectorAll('[aria-selected=true]').length===1;
+  }));
+  pass('selection changes reuse existing rows and favicon elements');
   const token=(await state()).session.token;
   await input(page,'f','keydown',{code:'KeyF'});
   await input(page,'f','keydown',{code:'KeyF',repeat:true});
@@ -168,6 +176,53 @@ try {
     await invoke('switch-next');
     assert.deepEqual((await settled()).order,baseline);
   }
+  // Delay the initial response only in the temporary test copy. Input setup and
+  // focus must proceed, and Escape must not wait for metadata before cancelling.
+  const earlySource=await readFile(join(extension,'early-input.js'),'utf8');
+  await context.route('**/early-input.js',route=>route.fulfill({
+    contentType:'text/javascript',
+    body:earlySource+'\nwindow.flytabInput.ready = window.flytabInput.ready.then(response => new Promise(resolve => { window.flytabTestReleaseInitial = () => resolve(response); }));\n'
+  }));
+  let delayedOpening=context.waitForEvent('page');
+  await invoke();
+  page=await delayedOpening;
+  await page.waitForFunction(()=>window.flytabInput?.handle && window.flytabTestReleaseInitial);
+  assert.equal(await page.locator('#tabs').getAttribute('aria-busy'),'true');
+  assert.equal(await page.evaluate(()=>document.activeElement?.id),'tabs');
+  let delayedClose=page.waitForEvent('close');
+  await input(page,'Escape','keydown',{altKey:true,shiftKey:true});
+  await delayedClose;
+  await context.unroute('**/early-input.js');
+  assert.equal((await settled()).session,null);
+  assert.deepEqual((await state()).order,baseline);
+  pass('list focuses and held-modifier Escape cancels while the initial response is delayed');
+  // An actual blur event captured before the UI loads must beat any buffered
+  // release and must not allow the UI to focus the list afterward.
+  let loadBlurredUI;
+  const blurredGate=new Promise(resolve=>{loadBlurredUI=resolve;});
+  await context.route('**/popup.js',async route=>{await blurredGate;await route.continue();});
+  delayedOpening=context.waitForEvent('page');
+  await invoke();
+  page=await delayedOpening;
+  await page.waitForFunction(()=>window.flytabInput && !window.flytabInput.handle && document.querySelector('#tabs'));
+  await page.evaluate(()=>{
+    window.dispatchEvent(new Event('blur'));
+    window.dispatchEvent(new KeyboardEvent('keyup',{key:'Shift',bubbles:true}));
+  });
+  assert.equal(await page.evaluate(()=>window.flytabInput.blurred),true);
+  assert.equal(await page.evaluate(()=>window.flytabInput.pending.length),1);
+  // Observe attempted focus after loading without delaying or replacing close.
+  const focusEvents=[];
+  await page.exposeFunction('flytabTestFocused',()=>focusEvents.push('focus'));
+  await page.evaluate(()=>document.querySelector('#tabs').addEventListener('focus',()=>window.flytabTestFocused()));
+  delayedClose=page.waitForEvent('close');
+  loadBlurredUI();
+  await delayedClose;
+  await context.unroute('**/popup.js');
+  assert.deepEqual(focusEvents,[]);
+  assert.equal((await settled()).session,null);
+  assert.deepEqual((await state()).order,baseline);
+  pass('blur before UI loading cancels without refocusing or replaying a buffered release');
   // Delay only the UI module: the synchronous early script must buffer release.
   let loadUI;
   const gate=new Promise(resolve=>{loadUI=resolve;});
@@ -201,7 +256,16 @@ try {
   await invoke(); page=await popup();
   const beforeCancel=(await state()).order;
   await page.locator('#cancel').focus();
-  await page.keyboard.press('Enter');
+  assert.equal(await page.evaluate(()=>document.activeElement.id),'cancel');
+  const cancelledByEnter=page.waitForEvent('close');
+  try { await page.keyboard.press('Enter'); }
+  catch (error) {
+    // The native button activates on keydown and can close this target before
+    // Playwright sends keyup. Only tolerate that exact expected-close race;
+    // session/order checks below still prove cancellation instead of commit.
+    if (!page.isClosed() || !error.message.includes('Target page, context or browser has been closed')) throw error;
+  }
+  await cancelledByEnter;
   assert.equal((await settled()).session,null);
   assert.deepEqual((await state()).order,beforeCancel);
   pass('Enter on focused Cancel cancels instead of activating a tab');

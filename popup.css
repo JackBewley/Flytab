@@ -32,6 +32,7 @@
   }
 }
 * { box-sizing: border-box; }
+html[data-surface="action"] body { width: 440px; box-sizing: border-box; }
 body { margin: 0; padding: 0 10px; min-width: 240px; }
 header { display: flex; justify-content: space-between; align-items: center; padding: 13px 8px 10px; gap: 16px; }
 h1 { display: flex; align-items: center; gap: 7px; margin: 0; font-size: 1rem; font-weight: 650; letter-spacing: -.02em; }

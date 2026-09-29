@@ -42,11 +42,11 @@ System font for titles and labels matches browser menus without external font re
 
 ## Layout
 
-440px outer native window, fluid inner layout. Five 48px rows visible; longer history scrolls. The former current tab appears last. Initial selection is the previous MRU tab. Header and footer remain compact. At narrow desktop widths content remains reachable; this extension has no mobile target.
+The pinned fast path uses a 440px toolbar popup anchored beneath Flytab’s icon, without an OS title bar. The unpinned/unsupported fallback uses a 440px outer native window with fluid inner layout. Five 48px rows visible; longer history scrolls. The former current tab appears last. Initial selection is the previous MRU tab. Header and footer remain compact. At narrow desktop widths content remains reachable; this extension has no mobile target.
 
 ## Elevation & Depth
 
-One flat list with a native OS frame. No nested cards, decorative gradients, or artificial glass.
+One flat list within Chrome’s toolbar bubble or the fallback native OS frame. No nested cards, decorative gradients, or artificial glass.
 
 ## Shapes
 
@@ -56,7 +56,7 @@ One flat list with a native OS frame. No nested cards, decorative gradients, or 
 
 The authored listbox in popup.js presents selection; background.js owns frozen order and selected index. Hold Option+Shift and press F to open, then keep both modifiers held while tapping F to move forward. Shift never reverses F. Release both modifiers to commit and close; releasing F while modifiers remain held does not commit. Both registered commands advance within the list and wrap. Escape/cancel closes without committing, including while modifiers are held. Enter/click remain available if Chrome misses release before popup focus. Arrows without modifiers and the wheel also preview. Outside the list, Option+F immediately toggles; the toolbar remains an immediate toggle.
 
-ARIA active descendant follows the selected option. Focus starts on the listbox; Tab can reach Cancel, where Enter activates the native button. Pointer hover does not alter selection. The footer explains forward F navigation and release to switch. No animation delays keyboard input.
+ARIA active descendant follows the selected option. Focus starts on the listbox before the initial data response; actual blur during loading cancels rather than refocusing. Selection-only updates reuse the same rows and favicons. Input capture and the initial state request precede styles/UI loading. Tab can reach Cancel, where Enter activates the native button. Pointer hover does not alter selection. The footer explains forward F navigation and release to switch. No animation delays keyboard input.
 
 Loading reserves five rows. Empty state explains that another tab must be visited. Inline errors use an ARIA alert and allow Escape; expired windows can be closed. No modal alerts or confirmation dialogs.
 

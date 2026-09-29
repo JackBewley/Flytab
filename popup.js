@@ -2,19 +2,31 @@ const token = new URL(location.href).searchParams.get('session');
 const list = document.querySelector('#tabs');
 const error = document.querySelector('#error');
 const hint = document.querySelector('#hint');
+const empty = document.querySelector('#empty');
+const position = document.querySelector('#position');
 const early = window.flytabInput;
+const rows = new Map();
 let current = null;
+let selectedRow = null;
 let finished = false;
 let inputTail = Promise.resolve();
 let wheelTotal = 0;
 let wheelAt = 0;
 
-async function request(type, extra = {}) {
-  const response = await chrome.runtime.sendMessage({ type: `flytab:${type}`, token, ...extra });
+function receive(response) {
   if (!response?.ok) throw new Error(response?.error || 'Flytab lost its connection. Close this window and try again.');
-  if (response.snapshot) render(response.snapshot);
+  if (response.snapshot && !finished) render(response.snapshot);
   return response;
 }
+
+async function request(type, extra = {}) {
+  return receive(await chrome.runtime.sendMessage({ type: `flytab:${type}`, token, ...extra }));
+}
+
+// The synchronous input listener already started this request before CSS/UI
+// loading. Selection actions wait for it, but focus and cancellation do not.
+const ready = early.ready.then(receive);
+void ready.catch(problem => { if (!finished) showError(problem); });
 
 function showError(problem) {
   error.textContent = problem.message;
@@ -28,59 +40,94 @@ function sequence(action) {
   inputTail = (async () => {
     try { await previous; } catch { /* recover */ }
     if (finished) return;
-    try { await action(); } catch (problem) { finished = false; showError(problem); }
+    try {
+      await ready;
+      if (!finished) await action();
+    } catch (problem) {
+      if (!finished) showError(problem);
+    }
   })();
+}
+
+function createRow(item, index, size) {
+  const row = document.createElement('div');
+  row.className = 'tab';
+  row.id = `tab-${item.id}`;
+  row.dataset.tabId = item.id;
+  row.setAttribute('role', 'option');
+  row.setAttribute('aria-selected', 'false');
+  row.setAttribute('aria-posinset', String(index + 1));
+  row.setAttribute('aria-setsize', String(size));
+  row.title = item.title;
+  const icon = document.createElement('img');
+  icon.alt = '';
+  icon.width = 20;
+  icon.height = 20;
+  icon.decoding = 'async';
+  // Only the visible five rows need eager favicon work. The browser loads later
+  // rows as scrolling brings them into view; no external URL is ever used.
+  icon.loading = index < 5 ? 'eager' : 'lazy';
+  icon.src = item.icon;
+  const title = document.createElement('span');
+  title.className = 'title';
+  title.textContent = item.title;
+  row.append(icon, title);
+  if (item.current || item.otherWindow) {
+    const detail = document.createElement('span');
+    detail.className = 'detail';
+    detail.textContent = item.current ? 'Current' : 'Other window';
+    row.append(detail);
+  }
+  const mark = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  mark.setAttribute('viewBox', '0 0 12 12');
+  mark.setAttribute('class', 'choice');
+  mark.setAttribute('aria-hidden', 'true');
+  const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  path.setAttribute('d', 'm3 2 4 4-4 4');
+  mark.append(path);
+  row.append(mark);
+  return row;
+}
+
+function sameItems(items, previous) {
+  return previous && items.length === previous.length && items.every((item, index) => {
+    const before = previous[index];
+    return item.id === before.id && item.title === before.title && item.icon === before.icon &&
+      item.current === before.current && item.otherWindow === before.otherWindow;
+  });
 }
 
 function render(snapshot) {
   if (snapshot.token !== token || (current && snapshot.revision < current.revision)) return;
+  // Command/move snapshots usually change only the selection. Keep existing
+  // DOM nodes and decoded icons instead of rebuilding the full history per key.
+  const itemsChanged = !sameItems(snapshot.items, current?.items);
   current = snapshot;
-  list.replaceChildren();
-  snapshot.items.forEach((item, index) => {
-    const row = document.createElement('div');
-    row.className = 'tab';
-    row.id = `tab-${item.id}`;
-    row.setAttribute('role', 'option');
-    row.setAttribute('aria-selected', String(index === snapshot.index));
-    row.setAttribute('aria-posinset', String(index + 1));
-    row.setAttribute('aria-setsize', String(snapshot.items.length));
-    row.title = item.title;
-    const icon = document.createElement('img');
-    icon.src = item.icon;
-    icon.alt = '';
-    icon.width = 20;
-    icon.height = 20;
-    icon.addEventListener('error', () => { icon.src = 'tab.svg'; }, { once: true });
-    const title = document.createElement('span');
-    title.className = 'title';
-    title.textContent = item.title;
-    row.append(icon, title);
-    if (item.current || item.otherWindow) {
-      const detail = document.createElement('span');
-      detail.className = 'detail';
-      detail.textContent = item.current ? 'Current' : 'Other window';
-      row.append(detail);
-    }
-    const mark = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    mark.setAttribute('viewBox', '0 0 12 12');
-    mark.setAttribute('class', 'choice');
-    mark.setAttribute('aria-hidden', 'true');
-    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    path.setAttribute('d', 'm3 2 4 4-4 4');
-    mark.append(path);
-    row.append(mark);
-    row.addEventListener('click', () => sequence(() => commit(item.id)));
-    list.append(row);
-  });
-  const selected = snapshot.items[snapshot.index];
-  if (selected) {
-    list.setAttribute('aria-activedescendant', `tab-${selected.id}`);
-    document.getElementById(`tab-${selected.id}`).scrollIntoView({ block: 'nearest' });
-  } else {
-    list.removeAttribute('aria-activedescendant');
+  if (itemsChanged) {
+    rows.clear();
+    const fragment = document.createDocumentFragment();
+    snapshot.items.forEach((item, index) => {
+      const row = createRow(item, index, snapshot.items.length);
+      rows.set(item.id, row);
+      fragment.append(row);
+    });
+    list.replaceChildren(fragment);
+    selectedRow = null;
   }
-  document.querySelector('#empty').hidden = snapshot.items.length > 1;
-  document.querySelector('#position').textContent = `${snapshot.items.length ? snapshot.index + 1 : 0} / ${snapshot.items.length}`;
+  const selected = snapshot.items[snapshot.index];
+  const nextRow = selected ? rows.get(selected.id) : null;
+  if (nextRow !== selectedRow) {
+    selectedRow?.setAttribute('aria-selected', 'false');
+    selectedRow = nextRow;
+    if (selectedRow) {
+      selectedRow.setAttribute('aria-selected', 'true');
+      list.setAttribute('aria-activedescendant', selectedRow.id);
+      selectedRow.scrollIntoView({ block: 'nearest' });
+    }
+  }
+  if (!selectedRow) list.removeAttribute('aria-activedescendant');
+  empty.hidden = snapshot.items.length > 1;
+  position.textContent = `${snapshot.items.length ? snapshot.index + 1 : 0} / ${snapshot.items.length}`;
   list.setAttribute('aria-busy', 'false');
   hint.textContent = 'F next · Release modifiers to switch';
 }
@@ -88,17 +135,26 @@ function render(snapshot) {
 async function commit(id) {
   if (!current?.items.length) return;
   finished = true;
-  await request('commit', id == null ? {} : { id });
+  try {
+    await request('commit', id == null ? {} : { id });
+    window.close();
+  }
+  catch (problem) { finished = false; throw problem; }
 }
 
 async function cancel(restore = true) {
+  if (finished) return;
   finished = true;
   try { await request('cancel', { restore }); }
   finally { window.close(); }
 }
 
+// Cancellation must stay available even if the initial worker request stalls.
+function cancelNow(restore = true) {
+  void cancel(restore).catch(() => { /* The window closes even after disconnection. */ });
+}
+
 async function input(event) {
-  if (event.key === 'Escape' && event.type === 'keydown') return await cancel();
   if (event.type === 'keyup') {
     if (!event.altKey && !event.shiftKey && !event.ctrlKey && !event.metaKey && !event.altGraph) {
       return await commit();
@@ -112,9 +168,22 @@ async function input(event) {
 }
 
 chrome.runtime.onMessage.addListener(message => {
-  if (message.type === 'flytab:state') render(message.snapshot);
+  if (message.type === 'flytab:close' && message.token === token) {
+    finished = true;
+    window.close();
+    return;
+  }
+  if (message.type === 'flytab:state' && !finished) render(message.snapshot);
 });
-document.querySelector('#cancel').addEventListener('click', () => sequence(() => cancel()));
+document.querySelector('#cancel').addEventListener('click', () => cancelNow());
+list.addEventListener('click', event => {
+  const row = event.target.closest('.tab');
+  if (row && list.contains(row)) sequence(() => commit(Number(row.dataset.tabId)));
+});
+list.addEventListener('error', event => {
+  const icon = event.target;
+  if (icon.tagName === 'IMG' && icon.getAttribute('src') !== 'tab.svg') icon.src = 'tab.svg';
+}, true);
 list.addEventListener('wheel', event => {
   event.preventDefault();
   const now = performance.now();
@@ -128,18 +197,17 @@ list.addEventListener('wheel', event => {
   }
 }, { passive: false });
 
-// Losing focus never commits an ambiguous selection. Do not steal focus back
-// when the user intentionally switches to another app or window.
-window.addEventListener('blur', () => sequence(() => cancel(false)));
-
-try {
-  await request('get');
+// The early listener also catches window blur during module loading. Never
+// steal focus back or replay a buffered release after the user leaves.
+early.handle = event => {
+  if (event.type === 'blur') cancelNow(false);
+  else if (event.type === 'keydown' && event.key === 'Escape') cancelNow();
+  else sequence(() => input(event));
+};
+if (early.blurred) {
+  early.pending.length = 0;
+  cancelNow(false);
+} else {
   list.focus({ preventScroll: true });
-  early.handle = event => sequence(() => input(event));
   for (const event of early.pending.splice(0)) early.handle(event);
-} catch (problem) {
-  showError(problem);
-  early.handle = event => {
-    if (event.type === 'keydown' && event.key === 'Escape') window.close();
-  };
 }

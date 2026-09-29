@@ -8,7 +8,7 @@ web
 
 ## Users and purpose
 
-Desktop Chrome users who want a very quick return to their previous tab across browser windows. The primary action is an immediate MRU toggle: macOS Option+F when the list is closed and the toolbar button switch directly, without opening a popup or waiting for modifier release. Option+Shift+F opens an optional compact five-row list. Flytab is a minimal Manifest V3 extension with on-device processing; the user explicitly rejects a separate helper app.
+Desktop Chrome users who want a very quick return to their previous tab across browser windows. The primary action is an immediate MRU toggle: macOS Option+F when the list is closed and the toolbar button switch directly, without opening a popup or waiting for modifier release. Option+Shift+F opens an optional compact five-row list. Pinned Flytab uses a toolbar popup on supported Chrome; unpinned/unsupported cases use the separate native window. Flytab is a minimal Manifest V3 extension with on-device processing; the user explicitly rejects a separate helper app.
 
 ## Capabilities and constraints
 

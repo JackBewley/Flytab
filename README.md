@@ -6,10 +6,10 @@ Jump straight back to the Chrome tab you were just on, across windows. A minimal
 
 1. Unzip the package if needed. Keep the **Flytab** folder somewhere permanent.
 2. Open `chrome://extensions`, enable **Developer mode**, choose **Load unpacked**, and select the folder containing `manifest.json`.
-3. Pin Flytab from Chrome's Extensions menu if you want the toolbar shortcut.
+3. **Pin Flytab** from Chrome's Extensions menu for the fastest switcher opening and the toolbar shortcut.
 4. Open `chrome://extensions/shortcuts`. Confirm **Switch to previous tab** is **Option+F** and **Open recent tabs** is **Option+Shift+F** on macOS. If it is blank or conflicts with another shortcut, assign one. Keep its scope **In Chrome**.
 
-After updating, click **Reload** on Flytab's extension card and confirm version **0.3.3**. Existing shortcut assignments are preserved; check the shortcuts page if you previously remapped them. No separate app is needed.
+After updating, click **Reload** on Flytab's extension card and confirm version **0.4.0**. Existing shortcut assignments are preserved; check the shortcuts page if you previously remapped them. No separate app is needed.
 
 ## Use
 
@@ -43,12 +43,12 @@ The popup captures releases as its first synchronous script and buffers them whi
 
 **If you release the entire opening shortcut before Chrome creates/focuses the popup, Chrome can still miss that release.** The list then remains open for Enter/click or another received release. A shortcut invocation does not include the current physical key state, and the extension cannot replay events that happened before its window received input. This was reproduced in the original prototype and confirmed by the user's physical-keyboard testing. Use Option+F for an immediate previous-tab tap; the visual shortcut is for holding while choosing.
 
-The list uses a compact native Chrome popup window with an OS title bar. No separate helper app, content scripts, or release-guessing timer is used. [TESTING.md](TESTING.md) distinguishes synthetic release checks from native shortcut observations.
+When Flytab is pinned in a supported Chrome version (127+), the list opens beneath its toolbar icon. An unpinned icon or unavailable toolbar-popup API uses the separate compact window. Both surfaces have the same keyboard behavior. Faster opening narrows the opportunity to miss a release; it cannot recover a release that already happened. No separate helper app, persistent hidden window, content scripts, or release-guessing timer is used. [TESTING.md](TESTING.md) distinguishes synthetic release checks from native shortcut observations.
 
 ## Privacy and permissions
 
 - **tabs**: open-tab titles/IDs/window IDs and activation events. Chrome may describe this as reading browsing history; Flytab does not use the History API.
-- **storage**: `storage.session` holds tab IDs, MRU order, and the open switcher's selection. It survives worker suspension and is cleared when Chrome exits or the extension reloads/disables. Titles, URLs and favicons are read live, not persisted by Flytab.
+- **storage**: `storage.session` holds tab IDs, MRU order, and the open switcher's selection. It survives worker suspension and is cleared when Chrome exits or the extension reloads/disables. The popup’s document ID may also be held for sender validation. Titles, URLs and favicons are read live, not persisted by Flytab.
 - **favicon**: reads Chrome's local favicon cache via its own extension URL. Loading remote `favIconUrl` images could make network requests, so Flytab never does that. Missing/internal-page icons use a bundled generic tab icon.
 
 No host permissions, content scripts, History API, analytics, server, account, or external network requests. CSP blocks external connections and images. Commands/action/windows APIs require no separate permission entries. Incognito is disabled in the manifest and filtered defensively.
@@ -57,7 +57,7 @@ At startup/installation, Flytab seeds from open tabs sorted by `lastAccessed`, w
 
 ## Source and tests
 
-`background.js` owns serialized session state and browser actions; `core.js` holds MRU rules; `early-input.js` captures early keyboard events; `popup.*` implements the switcher. Run `npm test` with Node 20+ for unit tests. Optional isolated-browser tests and remaining manual checks are in [TESTING.md](TESTING.md).
+`background.js` owns serialized session state and browser actions; `core.js` holds MRU rules; `early-input.js` captures early keyboard events; `popup.*` implements the switcher. Run `npm test` with Node 20+ for unit tests. Optional isolated-browser tests and remaining manual checks are in [TESTING.md](TESTING.md). Startup measurements and implementation tradeoffs are in [PERFORMANCE.md](PERFORMANCE.md).
 
 API references: [Commands](https://developer.chrome.com/docs/extensions/reference/api/commands), [Tabs / lastAccessed](https://developer.chrome.com/docs/extensions/reference/api/tabs), [Windows](https://developer.chrome.com/docs/extensions/reference/api/windows), [cached favicons](https://developer.chrome.com/docs/extensions/how-to/ui/favicons).
 

@@ -3,11 +3,16 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 
-function capture() {
+function capture(send = async () => ({ ok: true })) {
   const handlers = {};
   const window = { addEventListener: (type, fn) => { handlers[type] = fn; } };
   vm.runInNewContext(readFileSync(new URL('../early-input.js', import.meta.url), 'utf8'), {
-    window, performance: { now: () => 1 }
+    window, performance: { now: () => 1 }, URL,
+    location: { href: 'chrome-extension://flytab/popup.html?session=test-token' },
+    chrome: { runtime: { sendMessage: request => {
+      assert.equal(typeof handlers.keyup, 'function', 'capture must be installed before requesting data');
+      return send(request);
+    } } }
   });
   return { window, handlers };
 }
@@ -88,4 +93,37 @@ test('unrelated key releases cannot commit a fallback list', () => {
   const { window, handlers } = capture();
   for (const key of ['ArrowUp', 'Enter', 'Escape', 'a']) handlers.keyup({ key });
   assert.equal(window.flytabInput.pending.length, 0);
+});
+
+
+test('initial state request begins in the early script after input capture is installed', async () => {
+  const requests = [];
+  const { window } = capture(async request => {
+    requests.push(request);
+    return { ok: true, snapshot: { token: request.token } };
+  });
+  assert.equal(requests.length, 1);
+  assert.equal(requests[0].type, 'flytab:get');
+  assert.equal(requests[0].token, 'test-token');
+  assert.equal((await window.flytabInput.ready).snapshot.token, 'test-token');
+});
+
+test('early state request failures are retained for the UI without an unhandled rejection', async () => {
+  const { window } = capture(async () => { throw new Error('Worker unavailable'); });
+  const response = await window.flytabInput.ready;
+  assert.equal(response.ok, false);
+  assert.equal(response.error, 'Worker unavailable');
+});
+
+
+test('actual window blur is retained before UI readiness and forwarded afterward', () => {
+  const { window, handlers } = capture();
+  assert.equal(window.flytabInput.blurred, false);
+  handlers.blur();
+  assert.equal(window.flytabInput.blurred, true);
+  const events = [];
+  window.flytabInput.handle = event => events.push(event);
+  handlers.blur();
+  assert.equal(events.length, 1);
+  assert.equal(events[0].type, 'blur');
 });

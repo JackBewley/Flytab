@@ -12,9 +12,13 @@ import { tmpdir } from 'node:os';
 import { join, resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { generateKeyPairSync, createHash } from 'node:crypto';
+import { createServer } from 'node:http';
 const { chromium } = await import(process.env.PLAYWRIGHT_MODULE || 'playwright-core');
 const source = resolve(process.env.FLYTAB_SOURCE || join(dirname(fileURLToPath(import.meta.url)), '..'));
 const evidence = process.env.FLYTAB_EVIDENCE;
+const realistic = process.env.FLYTAB_REALISTIC === '1';
+const moveSamples = Number(process.env.FLYTAB_MOVE_SAMPLES || 0);
+const toggleSamples = Number(process.env.FLYTAB_TOGGLE_SAMPLES || 0);
 const pinned = process.env.FLYTAB_ACTION_PINNED == null ? null : process.env.FLYTAB_ACTION_PINNED === '1';
 const sizes = (process.env.FLYTAB_TAB_COUNTS || '8,120').split(',').map(Number);
 const warmSamples = Number(process.env.FLYTAB_WARM_SAMPLES || 15);
@@ -105,6 +109,11 @@ chrome.runtime.onMessage.addListener((request, sender, respond) => {
   if (request?.type === 'flytab-benchmark:error') {
     flytabBench.errors.push(request.error); respond({ok:true}); return;
   }
+  if (request?.type === 'flytab-benchmark:toggle') {
+    const started = flytabBench.now();
+    void enqueue(() => command('switch-next')).then(() => respond({ok:true,ms:flytabBench.now()-started}), error => respond({ok:false,error:error.message}));
+    return true;
+  }
   if (request?.type !== 'flytab-benchmark:open') return;
   flytabBench.popup = null;
   flytabBench.marks = {controllerSent:request.sent, commandDispatch:flytabBench.now()};
@@ -165,6 +174,27 @@ await appendFile(join(extension, 'early-input.js'), `
   observer.observe(document, {subtree:true, childList:true, attributes:true, attributeFilter:['aria-busy']});
   document.addEventListener('DOMContentLoaded', () => { probe.domContentLoaded = now(); observe(); }, {once:true});
   chrome.runtime.onMessage.addListener((message, sender, respond) => {
+    if (message.type === 'flytab-benchmark:moves') {
+      void (async () => {
+        const times=[];
+        for(let i=0;i<message.count;i++) {
+          const list=document.querySelector('#tabs');
+          const prior=list.getAttribute('aria-activedescendant'), start=performance.now();
+          await new Promise((resolve,reject)=>{
+            const timeout=setTimeout(()=>{observer.disconnect();reject(Error('Navigation timed out'));},5000);
+            const observer=new MutationObserver(()=>{
+              if(list.getAttribute('aria-activedescendant')===prior)return;
+              observer.disconnect();clearTimeout(timeout);
+              times.push(performance.now()-start);resolve();
+            });
+            observer.observe(list,{attributes:true,attributeFilter:['aria-activedescendant']});
+            window.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowDown',bubbles:true,cancelable:true}));
+          });
+        }
+        respond({ok:true,times});
+      })().catch(error=>respond({ok:false,error:error.message}));
+      return true;
+    }
     if (message.type !== 'flytab-benchmark:cancel') return;
     window.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true,cancelable:true}));
     respond({ok:true});
@@ -180,6 +210,19 @@ const context = await chromium.launchPersistentContext(join(scratch, 'profile'),
   executablePath: process.env.CHROME_PATH, headless: false, viewport: null,
   args: [`--disable-extensions-except=${extension}`, `--load-extension=${extension}`]
 });
+let fixtureServer, fixtureOrigin;
+if (realistic) {
+  const icon = await readFile(join(source, 'icons/icon-16.png'));
+  fixtureServer = createServer((request,response) => {
+    if(request.url === '/favicon.png') {
+      response.writeHead(200,{'Content-Type':'image/png','Cache-Control':'max-age=3600'});response.end(icon);return;
+    }
+    response.writeHead(200,{'Content-Type':'text/html; charset=utf-8'});
+    response.end('<!doctype html><title>Project notes — Quarterly review — '+request.url+'</title><link rel="icon" href="/favicon.png"><p>Local benchmark fixture.</p>');
+  });
+  await new Promise(resolve=>fixtureServer.listen(0,'127.0.0.1',resolve));
+  fixtureOrigin='http://127.0.0.1:'+fixtureServer.address().port;
+}
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 const errors = [];
 context.on('page', page => page.on('pageerror', error => errors.push(error.message)));
@@ -225,6 +268,7 @@ function aggregate(samples) {
   const listApiNames = [...new Set(samples.flatMap(sample => Object.keys(sample.apiThroughListReady)))];
   return {
     mechanisms:[...new Set(samples.map(sample=>sample.mechanism))],
+    navigationMs:distribution(samples.flatMap(sample=>sample.navigationMs || [])),
     timingsMs:Object.fromEntries(timingKeys.map(key=>[key,distribution(samples.map(sample=>sample.timingsMs[key]))])),
     apiBeforeWindowCreate:Object.fromEntries(apiNames.map(name=>[name,distribution(samples.map(sample=>sample.apiBeforeWindowCreate[name]||0))])),
     apiThroughListReady:Object.fromEntries(listApiNames.map(name=>[name,distribution(samples.map(sample=>sample.apiThroughListReady[name]||0))])),
@@ -232,6 +276,7 @@ function aggregate(samples) {
   };
 }
 const results = [];
+const toggles = [];
 try {
   await drain();
   const fixture = await worker.evaluate(async () => {
@@ -241,8 +286,27 @@ try {
   for (const count of sizes) {
     assert.ok(count>=2 && count>=fixture.ids.length, 'Tab counts must be increasing integers of at least two');
     for (let index=fixture.ids.length;index<count;index++) {
-      const id = await worker.evaluate(async ({windowId,index}) => (await chrome.tabs.create({windowId, active:true, url:'about:blank#flytab-startup-'+index})).id, {windowId:fixture.windowId,index});
-      fixture.ids.push(id);
+      const id = await worker.evaluate(async ({windowId,index,realistic,previous,fixtureOrigin}) => {
+        const tab=await chrome.tabs.create({windowId,active:true,url:realistic?fixtureOrigin+'/tab-'+index:'about:blank#flytab-startup-'+index});
+        if(realistic) {
+          let ready=false;
+          for(let attempt=0;attempt<250;attempt++) {
+            const loaded=await chrome.tabs.get(tab.id);
+            if(loaded.status==='complete' && loaded.url?.startsWith(fixtureOrigin) && loaded.title?.startsWith('Project notes')) {ready=true;break;}
+            await new Promise(r=>setTimeout(r,20));
+          }
+          if(!ready)throw Error('Local fixture did not load: '+tab.id);
+          // Bound renderer memory while retaining real visited tab metadata.
+          // Keep the last two loaded for representative immediate-toggle timing.
+          if(previous) {
+            const discarded=await chrome.tabs.discard(previous).catch(()=>null);
+            return {id:tab.id,previous,replacement:discarded?.id};
+          }
+        }
+        return {id:tab.id};
+      }, {windowId:fixture.windowId,index,realistic,fixtureOrigin,previous:fixture.ids.at(-2)});
+      if(id.replacement && id.replacement!==id.previous) fixture.ids[fixture.ids.indexOf(id.previous)]=id.replacement;
+      fixture.ids.push(id.id);
       await drain();
     }
     // Seeding uses real activation events so caches and durable order agree.
@@ -252,6 +316,22 @@ try {
     }, fixture.ids);
     assert.equal(fixtureOrder.visited,count);
     assert.equal(fixtureOrder.source,fixture.ids.at(-1));
+    if(toggleSamples) for(const mode of ['warm','worker-restarted']) {
+      const samples=[];
+      for(let i=-1;i<toggleSamples;i++) {
+        await drain();
+        if(mode==='worker-restarted')await stopWorker();
+        const measurement=await controller.evaluate(async()=>{
+          const start=performance.now();
+          const response=await chrome.runtime.sendMessage({type:'flytab-benchmark:toggle'});
+          return {...response,includingWakeMs:performance.now()-start};
+        });
+        assert.equal(measurement.ok,true,measurement.error);
+        if(i>=0)samples.push(measurement);
+        await getWorker();
+      }
+      toggles.push({tabCount:count,mode,samples,workerMs:distribution(samples.map(s=>s.ms)),includingWakeMs:distribution(samples.map(s=>s.includingWakeMs))});
+    }
     // One unmeasured warmup primes this scenario's ordinary browser disk cache.
     for (const mode of ['warm','worker-restarted']) {
       const samples=[];
@@ -313,6 +393,11 @@ try {
           },
           apiBeforeWindowCreate, apiThroughListReady, popup:popupProbe, worker:workerProbe
         };
+        if(moveSamples && sampleIndex>=0) {
+          const navigation=await worker.evaluate(count=>chrome.runtime.sendMessage({type:'flytab-benchmark:moves',count}),moveSamples);
+          assert.equal(navigation.ok,true,navigation.error);
+          entry.navigationMs=navigation.times;
+        }
         if(sampleIndex>=0) samples.push(entry);
         await worker.evaluate(() => chrome.runtime.sendMessage({type:'flytab-benchmark:cancel'}));
         await drain();
@@ -332,7 +417,7 @@ try {
   }
   assert.deepEqual(errors,[]);
   const report={
-    source,version,sourceHashes,pinned,browser:context.browser().version(),createdAt:new Date().toISOString(),
+    source,version,sourceHashes,pinned,realistic,toggles,browser:context.browser().version(),createdAt:new Date().toISOString(),
     methodology:[
       'Temporary runtime-only extension copy; all probes and private command hooks are excluded from shipping source.',
       'Optional pinning uses a temporary public manifest key and fresh-profile Preferences; ordinary user profiles and source manifests are unchanged.',
@@ -345,7 +430,8 @@ try {
       'Controller-based timing additionally includes extension message transport and worker wake on restarted samples. Restarted mode explicitly stops the worker using CDP before each sample.',
       'Input readiness is marked immediately after the synchronous early-input script installs listeners. Focus readiness is the first observed focused document with those listeners installed; it is not proof of physical key delivery.',
       'List readiness is the first mutation observation of rendered options and aria-busy=false. Interactive readiness is the later of list readiness and input+focus readiness; a pre-rendered unfocused bubble is not yet interactive. These are DOM/focus markers, not a compositor paint guarantee.',
-      'One unmeasured opening precedes each scenario. Visited about:blank fixtures avoid remote network, cached favicon work and website renderer variation.',
+      realistic ? 'Visited HTTP fixture pages are served on loopback with long titles and a PNG favicon. Actual URL/title/load completion are verified before sampling. All but the latest two fixture tabs are discarded to bound renderer memory; returned replacement IDs are tracked. No external site is loaded; this is not a real-world memory measurement.' : 'One unmeasured opening precedes each scenario. Visited about:blank fixtures avoid remote network, cached favicon work and website renderer variation.',
+      'Optional repeated-navigation times measure injected ArrowDown to DOM active-descendant change, excluding controller transport and compositor paint. Optional toggle times measure command completion inside the worker and separately controller roundtrip including wake; physical shortcut delivery is excluded.',
       'p50 and p95 use nearest rank. Small-sample tail timings and headed OS focus scheduling are noisy; compare the API counts and repeated runs too.',
       'API counts before window creation include worker initialization after controller-send on restarted samples; all calls and raw timestamps are retained.',
       'The controller page and Playwright debugging connections remain present in both before/after runs; these results do not model every user/browser load.'
@@ -355,5 +441,6 @@ try {
   console.log(`Completed ${results.reduce((n,result)=>n+result.samples.length,0)} openings for Flytab ${version}.`);
 } finally {
   await context.close();
+  if(fixtureServer)await new Promise(resolve=>fixtureServer.close(resolve));
   await rm(scratch,{recursive:true,force:true});
 }

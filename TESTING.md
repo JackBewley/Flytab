@@ -1,6 +1,6 @@
 # Flytab verification
 
-Version **0.5.1**, tested September 29, 2026 on macOS with isolated **Google Chrome for Testing 151.0.7922.34** profiles. Tests do not modify the user's ordinary Chrome profile. The approved v0.3.3 icon is unchanged.
+Version **0.6.0**, tested September 29, 2026 on macOS 26.6.2 with isolated **Google Chrome for Testing 153.0.8010.12** profiles. Comparative speed measurements use Chrome 151.0.7922.34 on both versions. Tests do not modify the user's ordinary Chrome profile. The approved v0.3.3 icon is unchanged.
 
 ## Interaction under test
 
@@ -10,7 +10,11 @@ Pinned Flytab opens a toolbar popup on supported Chrome; unpinned or unavailable
 
 ## Automated coverage
 
-**54 unit tests, 29 native-window browser checks, and 17 pinned-toolbar browser checks passed.** No popup page errors were observed. One initial action-suite run lost its test messaging connection during popup closure; a clean repeat passed all 17 checks without a code change. Results and screenshots are kept locally in `test-evidence/0.5.1/`, excluded from Git and distribution packages. Startup measurements and their limits are in [PERFORMANCE.md](PERFORMANCE.md). Two checks for the removed Cancel button were retired; Escape and outside dismissal remain covered. No input-routing behavior changed. Prior v0.4.1 native-key evidence on Chrome 153 remains documented below.
+**59 unit tests, 31 native-window browser checks, 18 pinned-toolbar browser checks, and 8 popup DOM/recovery checks passed (116 total).** The eight DOM checks also passed with Chrome’s actual minimum-font size set to 24px. No page errors were observed. Evidence is local under `test-evidence/0.6.0/`, excluded from Git and distribution. This includes real 200% browser zoom in the native fallback, both-surface Home/End navigation, transient error recovery, unchanged normal row geometry, forced colors, narrow layouts, text enlargement, and accessible names.
+
+The DOM/recovery suite runs real Chromium against production HTML/CSS/JS with mocked extension messaging for controlled failures. It does not prove native accelerator routing. The extension suites exercise real APIs using private hooks only in disposable source copies. Native input and VoiceOver observations below supplement them.
+
+The previous v0.5.1 baseline had 54 unit, 29 native-window, and 17 action-popup checks. One historical action-suite run lost its response during closure; a clean repeat passed without a source change. The v0.6.0 full run passed without a retry.
 
 Both browser suites load the real extension into a temporary copy with private command/input hooks. They exercise production callbacks and DOM handlers; injected events do not establish physical-key delivery reliability.
 
@@ -26,7 +30,19 @@ The action-popup suite covers unexpected input-Port loss, interruption during a 
 
 Unit coverage includes MRU rules, input buffering/modifier flags, parallel startup sequencing, no-op storage reads, failed opening/query/write cleanup, source closure during opening, simultaneous tab closures, incremental lifecycle updates, unsupported/unpinned fallback, temporary toolbar configuration, and real action-popup identity/focus conventions.
 
-## Native macOS observations and limits
+## v0.6.0 native input and VoiceOver smoke check
+
+VoiceOver was initially off, temporarily enabled through System Settings, and restored off after checking each surface. In both the pinned popup and unpinned fallback, native Control+Option+Right and Control+Option+Shift+Down were consumed by VoiceOver: no corresponding DOM input reached Flytab, the popup stayed open, and MRU stayed frozen. Plain ArrowDown changed selection once; Escape cancelled and returned to the source. The audit’s suspected VoiceOver interference did not reproduce in this bounded check, so modifier-release handling remains unchanged. This does not establish every VoiceOver mode or spoken-announcement quality.
+
+Native Option+F switched Source → Other window → Source without a popup. Option+Shift+F opened the list and a subsequent modified F advanced once. An unmodified native F then advanced and committed Project notes; the source became MRU #2. Native automation delivers complete chords but does not independently release modifiers: trace showed F keydown/keyup with modifiers still true. Continuous human hold/release reliability is therefore not newly proven by this test.
+
+Repeatable disposable fixtures: `FLYTAB_NATIVE_CHECK=1 node tests/action-popup.mjs` or `FLYTAB_NATIVE_CHECK=1 node tests/browser.mjs`. The terminal accepts `open`, `inspect`, `trace`, and `quit`. These hooks are development-only.
+
+## Minimum Chrome version
+
+The manifest still targets Chrome 121. The official mac-arm64 Chrome for Testing 121.0.6167.184 download was attempted on macOS 26.6.2; the application exited with SIGSEGV during launch, before extension checks. This is a test-environment limitation, not a demonstrated Flytab failure or a verified 121 pass. The native fallback is covered on Chrome 153; policy-restricted/unavailable action APIs are covered in unit tests. Verifying 121 on a compatible test host remains outstanding. No compatibility floor was raised just to bypass the test.
+
+## Earlier native macOS observations and limits
 
 The user reported that v0.4.0’s held/repeated shortcut required Enter despite its passing injected-release tests. Native tracing on Chrome 151 and 153 reproduced the routing problem: opening/repeating the chord invoked browser command callbacks, while the focused popup received no DOM key events. Removing the command listener in a disposable experiment immediately restored trusted modified-F keydown and keyup events. Chromium’s browser accelerator handling suppresses subsequent keyups; injecting a DOM event bypassed that failure.
 
@@ -62,15 +78,16 @@ The lockfile pins Playwright Core 1.63.0; `browser:install` installs its Chrome 
 
 ## Manual check
 
-1. Reload Flytab and verify version **0.5.1**. Pin its icon. Confirm Option+F is **Switch to previous tab** and Option+Shift+F is **Open recent tabs** in `chrome://extensions/shortcuts`.
+1. Reload Flytab and verify version **0.6.0**. Pin its icon. Confirm Option+F is **Switch to previous tab** and Option+Shift+F is **Open recent tabs** in `chrome://extensions/shortcuts`.
 2. Visit tabs in two windows, then quickly tap Option+F several times. Your two most recent tabs should alternate immediately without a popup. Repeat after the extension has been idle.
 3. Hold Option+Shift and tap F. The list should open beneath the pinned icon. Keep BOTH modifiers held and tap F several more times. Every tap must move forward; releasing F between taps must leave the list open. Keep cycling to check wrapping.
 4. Release Shift while keeping Option held: it should stay open. Release Option: the highlighted tab should activate and the list close. Repeat with Option released first, then Shift. Test left/right Option and Shift keys.
 5. Repeat the held sequence, then press Esc before releasing modifiers: it must cancel without activation. Check click/Enter selection, outside-click dismissal, and immediate toolbar toggling afterward. Source browser windows must stay open.
 6. Try an extremely fast opening tap. If the list missed the release before focus, Enter/click commits; Esc cancels. Do not infer reliable opening-tap commit from the held-cycle test. Option+F remains the direct-toggle path when Chrome delivers its command.
 7. Unpin Flytab and repeat the held sequence in the separate-window fallback. Pin it again for faster opening.
-8. Confirm background-created tabs stay absent until visited, closed tabs disappear, and startup approximately reconstructs order using `lastAccessed`. Verify incognito remains unavailable and remapped shortcuts still work.
+8. Check Home/End selection without activation and enlarged text/200% zoom.
+9. Confirm background-created tabs stay absent until visited, closed tabs disappear, and startup approximately reconstructs order using `lastAccessed`. Verify incognito remains unavailable and remapped shortcuts still work.
 
-The action popup and native light/dark/narrow captures were visually reviewed. The panel has a Recent tabs header and position count, two-line title/window rows with 14px titles, and a right-arrow selection indicator. The visible help footer stays removed. The unused hostname formatter and its test were removed with site labels. The native fallback fits five rows without a second page scrollbar. Keyboard instructions remain screen-reader accessible. The v0.5.0 panel received a separate read-only finish review returning ship after checking screenshots, source, and contrast (weakest reviewed text pair 5.39:1). Document screenshots do not establish the appearance of Chrome’s outer native frame. The Impeccable detector could not run because its engine is not installed, so direct review was used. The strict UI source audit reports no findings; DESIGN.md lint reports zero errors (one advisory about using the existing selected token instead of a primary token). Screen-reader behavior, minimum Chrome 121, Windows/Linux, every keyboard layout, and physical hold/release success rates have not been measured. Shortcut conflicts or OS-reserved combinations can prevent command delivery; remap through Chrome if needed.
+The action popup and native light/dark/narrow captures were visually reviewed. The panel has a Recent tabs header and position count, two-line title/window rows with 14px titles, and a right-arrow selection indicator. The visible help footer stays removed. The unused hostname formatter and its test were removed with site labels. The native fallback fits five rows without a second page scrollbar. Keyboard instructions remain screen-reader accessible. The v0.5.0 panel received a separate read-only finish review returning ship after checking screenshots, source, and contrast (weakest reviewed text pair 5.39:1). Document screenshots do not establish the appearance of Chrome’s outer native frame. The Impeccable detector could not run because its engine is not installed, so direct review was used. The strict UI source audit reports no findings; DESIGN.md lint reports zero errors (one advisory about using the existing selected token instead of a primary token). VoiceOver navigation received the bounded smoke check above. Minimum Chrome 121, Windows/Linux, every keyboard layout, comprehensive screen-reader behavior, and physical hold/release success rates remain unverified. Shortcut conflicts or OS-reserved combinations can prevent command delivery; remap through Chrome if needed.
 
 For local diagnostics, inspect `window.flytabInput.trace` in the popup. It contains recent key events and modifier flags in memory only, never titles/URLs or transmitted data. Opening DevTools may change focus/key routing and is unsuitable for timing measurements.

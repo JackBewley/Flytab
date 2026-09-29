@@ -2,6 +2,33 @@
 
 The goal is to make the switcher receive keyboard input sooner while keeping the immediate Option+F toggle, frozen preview order, release-to-select behavior, and existing permissions. A release that occurs before Chrome focuses the extension document is still unrecoverable.
 
+## v0.6.0 audit remediation and speed checks
+
+The runtime stays dependency-free. Error recovery adds no normal-path API roundtrip or awaited cosmetic update. Home/End uses the existing move message; early input capture, serialized preview/commit, and immediate toggling remain intact. Normal rows are still 52px, with growth for enlarged text. Development tests and packaging are excluded from the runtime.
+
+The final-source comparison uses Chrome for Testing 151.0.7922.34 and the frozen v0.5.1 commit `ba28542`. Verified loopback pages provide long titles and a local PNG favicon. Old fixture tabs are discarded to bound renderer memory, retaining two loaded tabs for toggling. Counts below exclude Chrome’s initial tab. Each version has 8 warm and 10 restarted-worker openings per size, 10 navigation samples per opening, and 20 toggles per worker mode: **108 openings, 1,080 navigation samples, and 240 toggles** across both versions. No popup errors were reported.
+
+Median milliseconds (v0.5.1 → v0.6.0):
+
+| Visited fixtures / worker | Fully ready | Navigate one entry | Immediate toggle |
+|---|---:|---:|---:|
+| 8 / warm | 66.9 → 67.6 | 0.7 → 0.7 | 5.7 → 6.7 |
+| 8 / worker-restarted | 67.8 → 81.8 | 0.7 → 0.7 | 9.5 → 9.3 |
+| 120 / warm | 80.4 → 82.5 | 2.8 → 2.7 | 14.0 → 15.0 |
+| 120 / worker-restarted | 83.8 → 82.7 | 2.8 → 2.8 | 11.8 → 13.1 |
+| 1000 / warm | 205.7 → 203.8 | 30.1 → 29.8 | 67.8 → 65.5 |
+| 1000 / worker-restarted | 201.2 → 202.7 | 30.4 → 30.1 | 69.1 → 69.7 |
+
+“Fully ready” includes document focus, rendered rows and authenticated input ownership. Navigation measures injected ArrowDown to DOM selection change. Toggle measures worker command completion; separate raw controller timings include wake/transport. These are not physical-key or compositor-paint timings. Both versions issue the same median tracked API calls through list readiness: 15 warm / 16 restarted, including two session writes.
+
+At 1,000 fixtures, opening p95 was 213.1 → 212.4 ms warm and 211.9 → 211.8 ms restarted. Navigation medians and immediate-toggle medians remain comparable; full-history processing is an existing scaling cost, not removed by this release. Small-history restarted opening showed a slower median in this particular run and requires the repeated-profile results below.
+
+Three earlier alternating pairs using blank 8/120-tab fixtures contained 180 openings, 1,800 navigation samples and 480 toggles. Pooled opening medians differed by at most 1.5 ms; navigation differed by at most 0.1 ms. The 120-tab restarted p95 nevertheless increased from 87.0 to 122.8 ms in that small sample. This is evidence against a broad slowdown, not a guarantee about every opening or tail.
+
+The slower small-history restarted case also appeared in a reversed-order pair (67.3 → 87.4 ms), so it was investigated rather than discarded. Isolated badge/layout experiments did not establish a stable cause; one old-layout run was faster, but another intrinsic-sizing variant was not. All experimental runtime changes were reverted. Four further fresh-profile pairs, alternating version order, yielded medians of 69.4 → 71.6, 68.1 → 68.7, 67.9 → 69.8, and 68.7 → 72.4 ms. Across their 60 restarted samples per version, pooled p50 was **68.7 → 70.9 ms** and p95 **94.2 → 95.1 ms**. Individual slow samples in both versions show about 25 ms waiting on Chrome’s existing context lookup. These repeated results support comparable speed with a small measured median difference; they do not establish zero overhead or identical tails. Evidence: `profile-{1,2,3,4}-{before,after}.json`, `profile-comparison.json`, and `restarted-repeat-{before,after}.json`.
+
+Raw evidence: `test-evidence/0.6.0/reliable-speed-{before,after}.json`, `paired-{1,2,3}-{before,after}.json`, and `paired-comparison.json`, with source hashes, raw samples and API counts. Earlier `scale-*` measurements used insufficiently verified intercepted-page fixtures and are exploratory only; one large run lost its test messaging channel and another was stopped during unreliable fixture setup. The loopback-fixture results above supersede those attempts. Browser memory and physical fast-tap success rates were not measured.
+
 ## Modifier-release correction in v0.4.1
 
 Native testing after the user’s report revealed a separate issue: Chromium suppresses keyups after processing a browser-handled shortcut in the popup. The v0.4.0 injected-event tests exercised the release handler but bypassed that native routing failure. v0.4.1 temporarily removes the background command listener only while an authenticated popup Port owns input, allowing the popup to handle configured chords directly. Closing, committing, cancelling, or losing the connection restores the global shortcuts. This retains the pinned opening route; it does not infer release from elapsed time.
@@ -79,6 +106,6 @@ Other approaches were rejected:
 
 ## Run
 
-Use the same Chrome for Testing and Playwright Core environment as TESTING.md. Set FLYTAB_SOURCE to a frozen source checkout for a baseline, FLYTAB_EVIDENCE to a JSON output path, and FLYTAB_ACTION_PINNED to 1 or 0 for the chosen surface, then run `node tests/startup.mjs`. Compare listener-plus-focus readiness and interactive readiness, not only row rendering.
+Use the same Chrome for Testing and Playwright Core environment as TESTING.md. Set FLYTAB_SOURCE to a frozen source checkout for a baseline, FLYTAB_EVIDENCE to a JSON output path, and FLYTAB_ACTION_PINNED to 1 or 0 for the chosen surface, then run `node tests/startup.mjs`. Compare listener-plus-focus readiness and interactive readiness, not only row rendering. For the v0.6.0 checks, also set `FLYTAB_REALISTIC=1`, `FLYTAB_TAB_COUNTS=8,120,1000`, `FLYTAB_WARM_SAMPLES=8`, `FLYTAB_RESTARTED_SAMPLES=10`, `FLYTAB_MOVE_SAMPLES=10`, and `FLYTAB_TOGGLE_SAMPLES=20`. Run headed comparisons sequentially and keep the same explicit `CHROME_PATH` for both versions.
 
 API references: [Action popup and pin state](https://developer.chrome.com/docs/extensions/reference/api/action), [runtime contexts](https://developer.chrome.com/docs/extensions/reference/api/runtime#method-getContexts), [window states](https://developer.chrome.com/docs/extensions/reference/api/windows), [offscreen limitations](https://developer.chrome.com/docs/extensions/reference/api/offscreen), [worker lifecycle](https://developer.chrome.com/docs/extensions/develop/concepts/service-workers/lifecycle). Chromium's [action-popup implementation contract](https://chromium.googlesource.com/chromium/src/+/main/chrome/browser/ui/views/extensions/extension_popup.h) explains why page load and bubble visibility are distinct.

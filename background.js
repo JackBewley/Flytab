@@ -295,7 +295,7 @@ async function command(name) {
     state.order = promote(state.order, source.id);
     state.session = {
       token, sourceId: source.id, sourceWindowId: source.windowId,
-      ids: [...state.order.slice(1), source.id], index: 0,
+      ids: [...state.order], index: state.order.length > 1 ? 1 : 0,
       revision: 0, kind: popup.kind, windowId: popup.windowId
     };
     await save(state);

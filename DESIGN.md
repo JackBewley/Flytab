@@ -35,11 +35,11 @@ Light mode uses a neutral gray surface (#f5f5f7), charcoal text (#242428), and s
 
 ## Typography
 
-System font for titles and labels matches browser menus without external font requests. Use 14px system text for titles (weight 500), 13px for the header (600), and 11px for window metadata and position count. The count uses tabular numerals; no monospaced decoration. Titles truncate visually but retain their full accessible text and tooltip.
+System font for titles and labels matches browser menus without external font requests. Use 13px system text for titles (weight 500), 13px for the header (600), and 11px for window metadata and position count. The count uses tabular numerals; no monospaced decoration. Titles truncate visually but retain their full accessible text and tooltip.
 
 ## Layout
 
-The pinned fast path uses a 384px toolbar popup anchored beneath Flytab’s icon, without an OS title bar. The unpinned/unsupported fallback uses a 384×364px outer native window with fluid inner layout. Five 52px rows visible at default text size; longer history scrolls. Rows use a 52px minimum height and 7px vertical padding so enlarged text can grow without overlapping adjacent entries. The former current tab appears last. Initial selection is the previous MRU tab. A 44px header with a subtle bottom rule anchors the rectangular frame. Main content has 8px padding. There is no visible footer, shortcut help, branded heading, or Cancel button. Escape and outside-click dismissal cancel. Keyboard instructions remain available to screen readers. At narrow desktop widths and browser zoom, the fallback body can shrink below 240 CSS pixels to keep content reachable without horizontal overflow; this extension has no mobile target.
+The pinned fast path uses a 384px toolbar popup anchored beneath Flytab’s icon, without an OS title bar. The unpinned/unsupported fallback uses a 384×364px outer native window with fluid inner layout. Five 52px rows visible at default text size; longer history scrolls. Rows use a 52px minimum height and 7px vertical padding so enlarged text can grow without overlapping adjacent entries. The current tab appears first. Initial selection is the previous MRU tab on the second row (the only row when just one tab exists). A 44px header with a subtle bottom rule anchors the rectangular frame. Main content has 8px padding. There is no visible footer, shortcut help, branded heading, or Cancel button. Escape and outside-click dismissal cancel. Keyboard instructions remain available to screen readers. At narrow desktop widths and browser zoom, the fallback body can shrink below 240 CSS pixels to keep content reachable without horizontal overflow; this extension has no mobile target.
 
 ## Elevation & Depth
 

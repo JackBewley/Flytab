@@ -9,7 +9,7 @@ Jump straight back to the Chrome tab you were just on, across windows. A minimal
 3. **Pin Flytab** from Chrome's Extensions menu for the fastest switcher opening and the toolbar shortcut.
 4. Open `chrome://extensions/shortcuts`. Confirm **Switch to previous tab** is **Option+F** and **Open recent tabs** is **Option+Shift+F** on macOS. If it is blank or conflicts with another shortcut, assign one. Keep its scope **In Chrome**.
 
-After updating, click **Reload** on Flytab's extension card and confirm version **0.6.0**. Existing shortcut assignments are preserved; check the shortcuts page if you previously remapped them. No separate app is needed.
+After updating, click **Reload** on Flytab's extension card and confirm version **0.6.1**. Existing shortcut assignments are preserved; check the shortcuts page if you previously remapped them. No separate app is needed.
 
 ## Use
 
@@ -34,7 +34,7 @@ Shift is part of the opening shortcut; it never reverses direction. Releasing F 
 | Mouse wheel / unmodified arrow keys | Browses the list; Up or scrolling up moves back |
 | Home / End without modifiers | Previews the first / last entry without switching |
 
-The five-row list scrolls through the full MRU history, with the starting tab last, labeled Current. Preview never activates a tab or changes MRU. A commit focuses the destination window, puts the destination first, and puts the source second. Switching to another window/app cancels the list.
+The five-row list scrolls through the full MRU history, with the current tab first, labeled Current tab, and the previous tab initially selected on the second row. Preview never activates a tab or changes MRU. A commit focuses the destination window, puts the destination first, and puts the source second. Switching to another window/app cancels the list.
 
 Both registered shortcuts move forward while the list is open. Plain F and Shift+F also move forward; releasing F when no modifiers are held commits. Other desktop platforms default to **Alt+Q / Alt+Shift+Q** to avoid Chrome's menu shortcut. Commands remain remappable: hold your configured modifiers while repeating the list shortcut, then release them to select. “Global MRU” means across Chrome windows, not a system-wide keyboard hook.
 

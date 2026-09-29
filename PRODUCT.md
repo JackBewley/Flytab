@@ -12,6 +12,8 @@ Desktop Chrome users who want a very quick return to their previous tab across b
 
 ## Capabilities and constraints
 
+The switcher shows the current tab first and initially highlights the previous tab on row two.
+
 Global MRU means across normal Chrome windows, not an operating-system-wide shortcut. Preview leaves MRU untouched. Commit brings the destination first and source second. Background-created tabs enter only after a visit. Incognito is excluded. No host permissions, content scripts, analytics, account, server, or external network requests.
 
 The visual interaction is hold Option+Shift, press F to open, keep both modifiers held while tapping F to move forward, then release both to commit and close. Shift is part of the opening chord, never a reverse action. Both configured shortcuts advance inside the list and wrap. While open, the popup owns shortcut input directly so Chrome preserves modifier releases; normal shortcut routing returns on close. Preview leaves MRU untouched. Escape cancels even with modifiers held; Enter/click remain available. Unmodified Home/End preview the first/last entry. Release capture starts before the UI module, and checks all modifier flags. Chrome cannot recover a release that happened before the popup received input; extremely fast opening taps may need Enter/click. The primary Option+F toggle is independent of this limitation.

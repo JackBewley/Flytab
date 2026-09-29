@@ -111,13 +111,15 @@ try {
   }
   s=await state();
   assert.equal(s.session.ids[s.session.index],ids.destination);
+  assert.equal(s.session.ids[0],ids.source);
+  assert.equal(s.session.index,1);
   assert.deepEqual(s.order,baseline);
   assert.ok((await page.locator('#hint').textContent()).includes('Release'));
   await page.evaluate(()=>{ window.flytabTestRows=[...document.querySelectorAll('[role=option]')]; });
   await input(page,'ArrowDown');
-  assert.equal((await state()).session.index,1);
+  assert.equal((await state()).session.index,2);
   await input(page,'ArrowUp');
-  assert.equal((await state()).session.index,0);
+  assert.equal((await state()).session.index,1);
   assert.deepEqual((await state()).order,baseline);
   pass('arrows preview without changing MRU');
   await input(page,'End');
@@ -262,7 +264,8 @@ try {
   await invoke('switch-next');
   assert.deepEqual((await settled()).order,baseline);
   await invoke(); page=await popup();
-  const closed=(await state()).session.ids[0];
+  const closingSession=(await state()).session;
+  const closed=closingSession.ids[closingSession.index];
   await worker.evaluate(id=>chrome.tabs.remove(id),closed);
   await pause(150);
   s=await state();

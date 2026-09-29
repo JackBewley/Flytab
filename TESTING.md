@@ -1,5 +1,11 @@
 # Flytab verification
 
+## v0.6.1 focused UI check
+
+Current tab now stays in the first row, with the previous tab initially selected in the second row; a single-tab list selects its only row. Titles are 13px. All 60 unit checks and 8 real-Chromium DOM/layout checks passed, including initial current/selected placement, enlarged text, navigation, and error recovery. The initial popup screenshot was inspected. The strict UI audit is clean. The small native action suite could not establish its fixture MRU on Chrome 153 (two attempts) or Chrome 151 (one attempt): history contained only the initial tab before Flytab opened. Those runs do not validate native interaction for this revision. No large-history benchmarks or full browser suite were run, per the user’s requested scope. Reload and review the small UI change before the later full test pass.
+
+## v0.6.0 release verification
+
 Version **0.6.0**, tested September 29, 2026 on macOS 26.6.2 with isolated **Google Chrome for Testing 153.0.8010.12** profiles. Comparative speed measurements use Chrome 151.0.7922.34 on both versions. Tests do not modify the user's ordinary Chrome profile. The approved v0.3.3 icon is unchanged.
 
 ## Interaction under test
@@ -78,7 +84,7 @@ The lockfile pins Playwright Core 1.63.0; `browser:install` installs its Chrome 
 
 ## Manual check
 
-1. Reload Flytab and verify version **0.6.0**. Pin its icon. Confirm Option+F is **Switch to previous tab** and Option+Shift+F is **Open recent tabs** in `chrome://extensions/shortcuts`.
+1. Reload Flytab and verify version **0.6.1**. Pin its icon. Confirm Option+F is **Switch to previous tab** and Option+Shift+F is **Open recent tabs** in `chrome://extensions/shortcuts`.
 2. Visit tabs in two windows, then quickly tap Option+F several times. Your two most recent tabs should alternate immediately without a popup. Repeat after the extension has been idle.
 3. Hold Option+Shift and tap F. The list should open beneath the pinned icon. Keep BOTH modifiers held and tap F several more times. Every tap must move forward; releasing F between taps must leave the list open. Keep cycling to check wrapping.
 4. Release Shift while keeping Option held: it should stay open. Release Option: the highlighted tab should activate and the list close. Repeat with Option released first, then Shift. Test left/right Option and Shift keys.

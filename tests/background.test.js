@@ -118,7 +118,8 @@ test('opens before tab scan/storage writes, but queues popup state until durable
   assert.equal(response.ok, true);
   assert.equal(response.snapshot.token, token);
   assert.equal(h.state.session.windowId, 12);
-  assert.deepEqual(Array.from(h.state.session.ids), [2, 3, 1]);
+  assert.deepEqual(Array.from(h.state.session.ids), [1, 2, 3]);
+  assert.equal(h.state.session.index, 1);
 });
 
 test('unchanged reads are write-free; pruning persists and advances the snapshot revision', async () => {
@@ -168,7 +169,7 @@ test('preview move uses one live tab scan and returns one snapshot without a dup
   h.calls.length = 0;
   const token = h.state.session.token;
   const response = await h.controller.message({ type: 'flytab:move', token, delta: 1 }, h.sender(token));
-  assert.equal(response.snapshot.index, 1);
+  assert.equal(response.snapshot.index, 2);
   assert.equal(h.calls.filter(call => call.name === 'tabs.query').length, 1);
   assert.equal(h.calls.filter(call => call.name === 'runtime.sendMessage').length, 0);
   assert.deepEqual(Array.from(h.state.order), [1, 2, 3]);
@@ -235,4 +236,12 @@ test('native popup input ownership uses the same exact sender binding and restor
   assert.equal(h.state.session,null);
   onDisconnect(); await h.controller.enqueue(async () => {});
   assert.equal(h.listeners.command,commandHandler);
+});
+
+test('a single-tab switcher keeps the current tab selected in its only row', async () => {
+  const h = harness();
+  h.tabs = h.tabs.filter(tab => tab.id === 1);
+  await h.controller.command('switch-previous');
+  assert.deepEqual(Array.from(h.state.session.ids), [1]);
+  assert.equal(h.state.session.index, 0);
 });

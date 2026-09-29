@@ -284,6 +284,8 @@ try {
   assert.ok(view.documentWidth <= view.width, 'long titles must not cause horizontal overflow');
   layout = { width: view.width, listHeight: view.listHeight, listMaxHeight: view.listMaxHeight, documentWidth: view.documentWidth };
   assert.equal(view.selected, `tab-${ids.destination}`);
+  assert.equal((await state()).session.ids[0], ids.source);
+  assert.equal((await state()).session.index, 1);
   assert.equal((await worker.evaluate(() => chrome.windows.getAll())).length, windowCount);
   assert.equal(await worker.evaluate(() => chrome.action.getPopup({})), '');
   pass('pinned command opens a focused action bubble at previous MRU without creating a browser window');
@@ -343,7 +345,7 @@ try {
       await key('Ï', 'keydown', { code: 'KeyF', altKey: true, shiftKey: true });
       await key('Ï', 'keyup', { code: 'KeyF', altKey: true, shiftKey: true });
     }
-    assert.equal((await state()).session.index, 0);
+    assert.equal((await state()).session.index, 1);
     await key(first, 'keyup', { altKey: first === 'Shift', shiftKey: first === 'Alt' });
     assert.ok((await state()).session);
     assert.deepEqual((await state()).order, baseline);
@@ -398,7 +400,7 @@ try {
   await closed();
   await invoke(); await inspect();
   assert.notEqual((await state()).session.token, dismissedToken);
-  assert.equal((await state()).session.index, 0);
+  assert.equal((await state()).session.index, 1);
   pass('dismissed action context is detected and the next command opens a fresh session');
   // Same popup URL and real token in a background tab must not authenticate as
   // the toolbar POPUP context, even though it belongs to this extension.

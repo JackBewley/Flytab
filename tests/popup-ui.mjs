@@ -20,7 +20,7 @@ try {
   });
   await page.addInitScript(()=>{
     const messages=[];
-    const snapshot={token:'fixture',revision:0,index:0,items:Array.from({length:8},(_,i)=>({id:i+1,title:i===0?'A long title <img src=x onerror=alert(1)> 日本語 — project documentation':`Example tab ${i+1}`,icon:'tab.svg',current:i===7,otherWindow:i===3}))};
+    const snapshot={token:'fixture',revision:0,index:1,items:Array.from({length:8},(_,i)=>({id:i+1,title:i===0?'A long title <img src=x onerror=alert(1)> 日本語 — project documentation':`Example tab ${i+1}`,icon:'tab.svg',current:i===0,otherWindow:i===3}))};
     const state=window.fixture={snapshot,fail:null,cancelled:false,closed:false,broadcast:()=>messages.forEach(fn=>fn({type:'flytab:state',snapshot:structuredClone(snapshot)}))};
     window.close=()=>{state.closed=true;};
     window.chrome={runtime:{lastError:null,onMessage:{addListener(fn){messages.push(fn);}},connect(){return {onMessage:{addListener(fn){queueMicrotask(()=>fn({type:'flytab:input-ready'}));}},onDisconnect:{addListener(){}},disconnect(){},postMessage(){}};},async sendMessage(message){
@@ -37,6 +37,12 @@ try {
   });
   await page.goto('https://flytab.test/popup.html?session=fixture&surface=action');
   await page.waitForSelector('[aria-selected="true"]');
+  assert.equal(await page.locator('.tab').first().locator('.meta').textContent(),'Current tab');
+  assert.equal(await page.locator('#tabs').getAttribute('aria-activedescendant'),'tab-2');
+  if(process.env.FLYTAB_EVIDENCE) {
+    await mkdir(process.env.FLYTAB_EVIDENCE,{recursive:true});
+    await page.screenshot({path:join(process.env.FLYTAB_EVIDENCE,'initial-popup.png')});
+  }
   await page.evaluate(()=>{window.fixture.fail='move';});
   await page.keyboard.press('ArrowDown');
   await page.waitForFunction(()=>!document.querySelector('#error').hidden);
@@ -44,7 +50,7 @@ try {
   assert.equal(await page.locator('#error').isVisible(),true);
   await page.keyboard.press('ArrowDown');
   await page.waitForFunction(()=>document.querySelector('#error').hidden);
-  assert.equal(await page.locator('#tabs').getAttribute('aria-activedescendant'),'tab-2');
+  assert.equal(await page.locator('#tabs').getAttribute('aria-activedescendant'),'tab-3');
   pass('failed move persists through broadcast and clears only after successful user navigation');
   await page.evaluate(()=>{window.fixture.fail='commit';});
   await page.keyboard.press('Enter');

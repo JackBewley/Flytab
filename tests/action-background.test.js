@@ -111,7 +111,7 @@ test('pinned action popup binds its real document, advances without refocusing a
   assert.equal(h.state.session.documentId,sender.documentId);
   h.calls.length = 0;
   await h.open();
-  assert.equal(h.state.session.index,1);
+  assert.equal(h.state.session.index,0);
   assert.equal(h.calls.some(call => call.name === 'windows.update'),false);
   assert.equal((await h.controller.message({type:'flytab:cancel',token},sender)).ok,true);
   assert.equal(h.state.session,null);
@@ -185,7 +185,7 @@ test('dismissed action context starts a new session instead of cycling an invisi
   h.contexts.length = 0;
   await h.open();
   assert.notEqual(h.state.session.token,previous);
-  assert.equal(h.state.session.index,0);
+  assert.equal(h.state.session.index,1);
   assert.equal(h.calls.filter(call => call.name === 'action.openPopup').length,2);
   assert.equal(h.windows.has(10),true);
 });
@@ -234,7 +234,7 @@ test('focused action bubble authenticates and cycles when Chrome reports its own
   h.calls.length = 0;
   await h.open();
   assert.equal(h.state.session.token,token);
-  assert.equal(h.state.session.index,1);
+  assert.equal(h.state.session.index,0);
   assert.equal(h.calls.some(call => call.name === 'windows.update' || call.name === 'action.openPopup'),false);
   assert.equal((await h.controller.message({type:'flytab:commit',token,id:2},sender)).ok,true);
   assert.deepEqual(Array.from(h.state.order),[2,1]);

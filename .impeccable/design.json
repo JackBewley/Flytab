@@ -1,0 +1,10 @@
+{
+  "name": "Flytab",
+  "mode": "operate",
+  "canonicalTokens": "popup.css",
+  "surface": "popup.html",
+  "direction": "Compact native selection menu, five favicon/title rows, blue selection and directional mark",
+  "colors": { "surface": "#f7f9fc", "ink": "#1e2c40", "selected": "#245cc5", "selectedInk": "#ffffff" },
+  "typography": { "body": "system sans-serif", "utility": "system monospace" },
+  "geometry": { "outerWidth": 440, "rowHeight": 48, "visibleRows": 5 }
+}

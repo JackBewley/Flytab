@@ -1,0 +1,12 @@
+# Normalize source text to LF across macOS, Linux and Windows.
+* text=auto eol=lf
+
+# Preserve binary assets and packages byte-for-byte.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.zip binary
+*.crx binary

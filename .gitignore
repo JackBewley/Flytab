@@ -1,0 +1,44 @@
+# Optional local Node tooling (keep package/lock files trackable).
+node_modules/
+.npm/
+
+# Extension packages and generated output.
+/dist/
+/build/
+*.crx
+
+# Test output, local evidence, coverage and isolated browser profiles.
+/test-evidence/
+/test-results/
+/playwright-report/
+/coverage/
+/.nyc_output/
+/work/
+/browser-profile/
+/live-profile/
+
+# Generated design-tool artifacts; retain .impeccable/design.json.
+/.impeccable/review/
+/.impeccable/mocks/
+/.impeccable/build/
+/.impeccable/cache/
+/.impeccable/config.local.json
+/premium-audit.json
+
+# Local configuration and private extension-signing credentials.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Logs, operating-system metadata and temporary editor files.
+*.log
+.DS_Store
+._*
+Thumbs.db
+*.swp
+*.swo
+*~

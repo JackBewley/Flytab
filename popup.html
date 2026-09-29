@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Flytab</title>
+    <script src="early-input.js"></script>
+    <link rel="stylesheet" href="popup.css">
+    <script type="module" src="popup.js"></script>
+  </head>
+  <body>
+    <header>
+      <h1><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17 20 5l-5 15-4-7-7 4Z"/><path d="m11 13 9-8"/></svg>Flytab</h1>
+      <span id="position" aria-hidden="true">Recent tabs</span>
+    </header>
+    <main>
+      <div id="tabs" role="listbox" aria-label="Recent tabs" aria-describedby="hint" tabindex="0" aria-busy="true"></div>
+      <p id="empty" hidden>Visit another tab to start switching.</p>
+      <p id="error" role="alert" hidden></p>
+    </main>
+    <footer>
+      <p id="hint">Loading recent tabs…</p>
+      <p class="keys"><span><kbd>Enter</kbd> switch</span><span><kbd>Esc</kbd> cancel</span><button id="cancel" type="button">Cancel</button></p>
+    </footer>
+  </body>
+</html>

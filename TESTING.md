@@ -1,6 +1,6 @@
 # Flytab verification
 
-Version **0.4.3**, tested September 29, 2026 on macOS with isolated **Google Chrome for Testing 151.0.7922.34** profiles. Tests do not modify the user's ordinary Chrome profile. The approved v0.3.3 icon is unchanged.
+Version **0.5.0**, tested September 29, 2026 on macOS with isolated **Google Chrome for Testing 151.0.7922.34** profiles. Tests do not modify the user's ordinary Chrome profile. The approved v0.3.3 icon is unchanged.
 
 ## Interaction under test
 
@@ -10,7 +10,7 @@ Pinned Flytab opens a toolbar popup on supported Chrome; unpinned or unavailable
 
 ## Automated coverage
 
-**54 unit tests, 29 native-window browser checks, and 17 pinned-toolbar browser checks passed.** No popup page errors were observed. Results and screenshots are kept locally in `test-evidence/0.4.3/`, excluded from Git and distribution packages. Startup measurements and their limits are in [PERFORMANCE.md](PERFORMANCE.md). Two checks for the removed Cancel button were retired; Escape and outside dismissal remain covered. No input-routing behavior changed. Prior v0.4.1 native-key evidence on Chrome 153 remains documented below.
+**55 unit tests, 29 native-window browser checks, and 17 pinned-toolbar browser checks passed.** No popup page errors were observed. Results and screenshots are kept locally in `test-evidence/0.5.0/`, excluded from Git and distribution packages. Startup measurements and their limits are in [PERFORMANCE.md](PERFORMANCE.md). Two checks for the removed Cancel button were retired; Escape and outside dismissal remain covered. No input-routing behavior changed. Prior v0.4.1 native-key evidence on Chrome 153 remains documented below.
 
 Both browser suites load the real extension into a temporary copy with private command/input hooks. They exercise production callbacks and DOM handlers; injected events do not establish physical-key delivery reliability.
 
@@ -22,7 +22,7 @@ Shared behavior coverage includes:
 - Existing rows and favicons are reused during selection changes. Buffered early releases wait for data. Escape and focus setup work while the initial response is delayed; a received blur event during loading discards buffered commits (an injected-event check).
 - No received release means no timer-based guess. Enter remains a fallback.
 
-The action-popup suite covers unexpected input-Port loss, interruption during a pending commit, safe cancellation after a real worker stop, and restored shortcuts after every closing path. It additionally validates real Chrome sender/context shapes, rejects an ordinary extension tab using the live popup URL/token, recovers from external dismissal, and checks that commits/cancellation never remove the source or destination browser window. The actual popup is 360px wide with a 200px five-row list and no horizontal overflow with a long title; a screenshot was inspected.
+The action-popup suite covers unexpected input-Port loss, interruption during a pending commit, safe cancellation after a real worker stop, and restored shortcuts after every closing path. It additionally validates real Chrome sender/context shapes, rejects an ordinary extension tab using the live popup URL/token, recovers from external dismissal, and checks that commits/cancellation never remove the source or destination browser window. The actual popup is 384px wide with a 260px five-row list and no horizontal overflow with a long title; a screenshot was inspected.
 
 Unit coverage includes MRU rules, input buffering/modifier flags, parallel startup sequencing, no-op storage reads, failed opening/query/write cleanup, source closure during opening, simultaneous tab closures, incremental lifecycle updates, unsupported/unpinned fallback, temporary toolbar configuration, and real action-popup identity/focus conventions.
 
@@ -62,7 +62,7 @@ Use Chrome for Testing or Chromium, which accept automated unpacked-extension lo
 
 ## Manual check
 
-1. Reload Flytab and verify version **0.4.3**. Pin its icon. Confirm Option+F is **Switch to previous tab** and Option+Shift+F is **Open recent tabs** in `chrome://extensions/shortcuts`.
+1. Reload Flytab and verify version **0.5.0**. Pin its icon. Confirm Option+F is **Switch to previous tab** and Option+Shift+F is **Open recent tabs** in `chrome://extensions/shortcuts`.
 2. Visit tabs in two windows, then quickly tap Option+F several times. Your two most recent tabs should alternate immediately without a popup. Repeat after the extension has been idle.
 3. Hold Option+Shift and tap F. The list should open beneath the pinned icon. Keep BOTH modifiers held and tap F several more times. Every tap must move forward; releasing F between taps must leave the list open. Keep cycling to check wrapping.
 4. Release Shift while keeping Option held: it should stay open. Release Option: the highlighted tab should activate and the list close. Repeat with Option released first, then Shift. Test left/right Option and Shift keys.
@@ -71,6 +71,6 @@ Use Chrome for Testing or Chromium, which accept automated unpacked-extension lo
 7. Unpin Flytab and repeat the held sequence in the separate-window fallback. Pin it again for faster opening.
 8. Confirm background-created tabs stay absent until visited, closed tabs disappear, and startup approximately reconstructs order using `lastAccessed`. Verify incognito remains unavailable and remapped shortcuts still work.
 
-The action popup and native light/dark/narrow captures were visually reviewed. The help footer, branded header, count, and submenu-style chevron are removed. The native fallback fits five rows without a second page scrollbar. Keyboard instructions remain screen-reader accessible. The strict UI source audit reports no findings; DESIGN.md lint reports zero errors (one advisory about using the existing selected token instead of a primary token). Screen-reader behavior, minimum Chrome 121, Windows/Linux, every keyboard layout, and physical hold/release success rates have not been measured. Shortcut conflicts or OS-reserved combinations can prevent command delivery; remap through Chrome if needed.
+The action popup and native light/dark/narrow captures were visually reviewed. The panel has a Recent tabs header and position count, two-line title/site rows, and a selection checkmark. The visible help footer stays removed. Site-label tests verify that credentials, paths, queries, fragments, local paths and extension IDs are never used as labels. The native fallback fits five rows without a second page scrollbar. Keyboard instructions remain screen-reader accessible. A separate read-only finish review returned ship after checking screenshots, source, and contrast (weakest reviewed text pair 5.39:1). Document screenshots do not establish the appearance of Chrome’s outer native frame. Browser fixtures primarily use data URLs and show fallback site labels; hostname formatting is unit-tested. The Impeccable detector could not run because its engine is not installed, so direct review was used. The strict UI source audit reports no findings; DESIGN.md lint reports zero errors (one advisory about using the existing selected token instead of a primary token). Screen-reader behavior, minimum Chrome 121, Windows/Linux, every keyboard layout, and physical hold/release success rates have not been measured. Shortcut conflicts or OS-reserved combinations can prevent command delivery; remap through Chrome if needed.
 
 For local diagnostics, inspect `window.flytabInput.trace` in the popup. It contains recent key events and modifier flags in memory only, never titles/URLs or transmitted data. Opening DevTools may change focus/key routing and is unsuitable for timing measurements.

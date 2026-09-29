@@ -277,9 +277,9 @@ try {
   assert.equal(view.inputReady, true);
   assert.equal(view.focused, true);
   assert.equal(view.activeElement, 'tabs');
-  assert.equal(view.width, 360);
-  assert.equal(view.listHeight, 200);
-  assert.equal(view.listMaxHeight, '200px');
+  assert.equal(view.width, 384);
+  assert.equal(view.listHeight, 260);
+  assert.equal(view.listMaxHeight, '260px');
   assert.ok(view.documentWidth <= view.width, 'long titles must not cause horizontal overflow');
   layout = { width: view.width, listHeight: view.listHeight, listMaxHeight: view.listMaxHeight, documentWidth: view.documentWidth };
   assert.equal(view.selected, `tab-${ids.destination}`);

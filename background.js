@@ -1,4 +1,4 @@
-import { eligible, promote, commitOrder, reconstruct, step, pruneSession } from './core.js';
+import { eligible, promote, commitOrder, reconstruct, step, pruneSession, siteLabel } from './core.js';
 
 const ORIGIN = chrome.runtime.getURL('');
 const STATE_KEY = 'flytab';
@@ -71,6 +71,7 @@ async function snapshot(state, knownTabs) {
   const items = session.ids.map(id => byId.get(id)).filter(Boolean).map(tab => ({
     id: tab.id,
     title: tab.title || 'Untitled tab',
+    site: siteLabel(tab.url),
     // Never load tab.favIconUrl: it can be a remote resource. The extension's
     // _favicon endpoint is Chrome's local cache, with a generic fallback.
     icon: cachedIcon(tab),
@@ -161,9 +162,9 @@ async function openSwitcher(token, parent, useAction) {
     }
   }
   const popup = await chrome.windows.create({
-    url: popupURL(token), type: 'popup', focused: true, width: 360, height: 268,
-    left: Math.round((parent.left || 0) + Math.max(0, ((parent.width || 360) - 360) / 2)),
-    top: Math.round((parent.top || 0) + Math.max(0, ((parent.height || 268) - 268) / 3))
+    url: popupURL(token), type: 'popup', focused: true, width: 384, height: 364,
+    left: Math.round((parent.left || 0) + Math.max(0, ((parent.width || 384) - 384) / 2)),
+    top: Math.round((parent.top || 0) + Math.max(0, ((parent.height || 364) - 364) / 3))
   });
   if (!popup?.id) throw new Error('Chrome could not open the switcher.');
   return { kind: 'window', windowId: popup.id };

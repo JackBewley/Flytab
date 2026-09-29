@@ -11,8 +11,12 @@
     <script type="module" src="popup.js"></script>
   </head>
   <body>
+    <header>
+      <h1 id="heading">Recent tabs</h1>
+      <span id="position" aria-hidden="true"></span>
+    </header>
     <main>
-      <div id="tabs" role="listbox" aria-label="Recent tabs" aria-describedby="hint" tabindex="0" aria-busy="true"></div>
+      <div id="tabs" role="listbox" aria-labelledby="heading" aria-describedby="hint" tabindex="0" aria-busy="true"></div>
       <p id="empty" hidden>Visit another tab to start switching.</p>
       <p id="error" role="alert" hidden></p>
     </main>

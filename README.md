@@ -9,7 +9,7 @@ Jump straight back to the Chrome tab you were just on, across windows. A minimal
 3. **Pin Flytab** from Chrome's Extensions menu for the fastest switcher opening and the toolbar shortcut.
 4. Open `chrome://extensions/shortcuts`. Confirm **Switch to previous tab** is **Option+F** and **Open recent tabs** is **Option+Shift+F** on macOS. If it is blank or conflicts with another shortcut, assign one. Keep its scope **In Chrome**.
 
-After updating, click **Reload** on Flytab's extension card and confirm version **0.4.3**. Existing shortcut assignments are preserved; check the shortcuts page if you previously remapped them. No separate app is needed.
+After updating, click **Reload** on Flytab's extension card and confirm version **0.5.0**. Existing shortcut assignments are preserved; check the shortcuts page if you previously remapped them. No separate app is needed.
 
 ## Use
 
@@ -56,6 +56,12 @@ When Flytab is pinned in a supported Chrome version (127+), the list opens benea
 No host permissions, content scripts, History API, analytics, server, account, or external network requests. CSP blocks external connections and images. Commands/action/windows APIs require no separate permission entries. Incognito is disabled in the manifest and filtered defensively.
 
 At startup/installation, Flytab seeds from open tabs sorted by `lastAccessed`, with the focused tab first. That is approximate: Chrome records activation within a window, not the full historical order of window focus, and cannot prove whether an already-open tab was ever visited before installation. New background tabs observed by Flytab stay out until visited. Tabs restored after the initial startup scan may enter only when visited.
+
+## Switcher appearance
+
+The rectangular panel has a Recent tabs header, position count, and five visible rows. Each row shows a title and site label; the checkmark marks the selected destination. Site labels omit URL credentials, paths, queries and fragments. Light and dark appearances follow the system. There is no visible help footer; Escape cancels and Enter remains a fallback.
+
+Chrome controls the outer extension-popup frame and does not expose its corner shape to Flytab. The panel is designed for that rectangular frame.
 
 ## Source and tests
 

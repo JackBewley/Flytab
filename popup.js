@@ -3,6 +3,7 @@ const list = document.querySelector('#tabs');
 const error = document.querySelector('#error');
 const hint = document.querySelector('#hint');
 const empty = document.querySelector('#empty');
+const position = document.querySelector('#position');
 const early = window.flytabInput;
 const rows = new Map();
 let current = null;
@@ -70,20 +71,37 @@ function createRow(item, index, size) {
   const title = document.createElement('span');
   title.className = 'title';
   title.textContent = item.title;
-  row.append(icon, title);
+  const copy = document.createElement('span');
+  copy.className = 'copy';
+  const meta = document.createElement('span');
+  meta.className = 'meta';
+  const site = document.createElement('span');
+  site.className = 'site';
+  site.textContent = item.site || 'Browser tab';
+  meta.append(site);
+  copy.append(title, meta);
+  row.append(icon, copy);
   if (item.current || item.otherWindow) {
     const detail = document.createElement('span');
     detail.className = 'detail';
     detail.textContent = item.current ? 'Current' : 'Other window';
-    row.append(detail);
+    meta.append(detail);
   }
+  const choice = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  choice.setAttribute('class', 'choice');
+  choice.setAttribute('viewBox', '0 0 16 16');
+  choice.setAttribute('aria-hidden', 'true');
+  const check = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  check.setAttribute('d', 'm3.5 8 3 3 6-6');
+  choice.append(check);
+  row.append(choice);
   return row;
 }
 
 function sameItems(items, previous) {
   return previous && items.length === previous.length && items.every((item, index) => {
     const before = previous[index];
-    return item.id === before.id && item.title === before.title && item.icon === before.icon &&
+    return item.id === before.id && item.title === before.title && item.icon === before.icon && item.site === before.site &&
       item.current === before.current && item.otherWindow === before.otherWindow;
   });
 }
@@ -118,6 +136,7 @@ function render(snapshot) {
   }
   if (!selectedRow) list.removeAttribute('aria-activedescendant');
   empty.hidden = snapshot.items.length > 1;
+  position.textContent = snapshot.items.length ? `${snapshot.index + 1} of ${snapshot.items.length}` : '';
   list.setAttribute('aria-busy', 'false');
   hint.textContent = 'F next. Release modifiers to switch. Enter selects. Escape cancels.';
 }

@@ -36,3 +36,15 @@ export function pruneSession(session, liveIds) {
   const previousIndex = ids.indexOf(selected);
   return { ...session, ids, index: previousIndex >= 0 ? previousIndex : Math.min(session.index, Math.max(0, ids.length - 1)) };
 }
+
+// Display only an origin label, never credentials, paths, queries or fragments.
+export function siteLabel(value) {
+  try {
+    const url = new URL(value);
+    if (['http:', 'https:'].includes(url.protocol)) return url.hostname.replace(/^www\./, '');
+    if (url.protocol === 'file:') return 'Local file';
+    if (['chrome:', 'chrome-search:', 'chrome-untrusted:', 'about:'].includes(url.protocol)) return 'Chrome';
+    if (url.protocol === 'chrome-extension:') return 'Extension';
+  } catch { /* Missing or malformed URLs still have a readable label. */ }
+  return 'Browser tab';
+}

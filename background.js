@@ -133,9 +133,10 @@ async function command(name) {
     catch { state.session = null; await save(state); }
   }
   if (state.session) {
-    // Chrome owns modified shortcuts; the popup handles only plain F/Shift+F
-    // so one physical press cannot advance through both event paths.
-    state.session = step(state.session, name === 'switch-next' ? 1 : -1);
+    // Both commands advance in the open list: Shift is part of its opening
+    // chord, never a direction switch. Chrome owns modified F presses so the
+    // popup must not count them again.
+    state.session = step(state.session, 1);
     state.session.revision++;
     await save(state);
     await chrome.windows.update(state.session.windowId, { focused: true });

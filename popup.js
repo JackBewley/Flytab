@@ -82,7 +82,7 @@ function render(snapshot) {
   document.querySelector('#empty').hidden = snapshot.items.length > 1;
   document.querySelector('#position').textContent = `${snapshot.items.length ? snapshot.index + 1 : 0} / ${snapshot.items.length}`;
   list.setAttribute('aria-busy', 'false');
-  hint.textContent = 'F next · Shift+F back · ↑ ↓ browse';
+  hint.textContent = 'F next · Release modifiers to switch';
 }
 
 async function commit(id) {
@@ -99,8 +99,14 @@ async function cancel(restore = true) {
 
 async function input(event) {
   if (event.key === 'Escape' && event.type === 'keydown') return await cancel();
+  if (event.type === 'keyup') {
+    if (!event.altKey && !event.shiftKey && !event.ctrlKey && !event.metaKey && !event.altGraph) {
+      return await commit();
+    }
+    return;
+  }
   if (event.key === 'Enter') return await commit();
-  if (event.key === 'f') return await request('move', { delta: event.shiftKey ? -1 : 1 });
+  if (event.key === 'f') return await request('move', { delta: 1 });
   if (['ArrowDown', 'ArrowRight'].includes(event.key)) return await request('move', { delta: 1 });
   if (['ArrowUp', 'ArrowLeft'].includes(event.key)) return await request('move', { delta: -1 });
 }

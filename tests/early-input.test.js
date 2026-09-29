@@ -19,11 +19,21 @@ test('Enter received before the list is ready is buffered', () => {
   assert.equal(window.flytabInput.pending[0].key, 'Enter');
 });
 
-test('the list never listens for or commits on modifier release', () => {
+test('release events retain each modifier state before the UI is ready', () => {
   const { window, handlers } = capture();
-  assert.equal(handlers.keyup, undefined);
-  handlers.keydown({ key: 'Alt', altKey: true });
-  assert.equal(window.flytabInput.pending.length, 0);
+  handlers.keyup({ key: 'F', code: 'KeyF', altKey: true, shiftKey: true });
+  handlers.keyup({ key: 'Alt', shiftKey: true });
+  handlers.keyup({ key: 'Shift' });
+  const events = window.flytabInput.pending;
+  assert.equal(events.length, 3);
+  assert.equal(events[0].type, 'keyup');
+  assert.equal(events[0].key, 'f');
+  assert.equal(events[0].altKey, true);
+  assert.equal(events[0].shiftKey, true);
+  assert.equal(events[1].altKey, false);
+  assert.equal(events[1].shiftKey, true);
+  assert.equal(events[2].altKey, false);
+  assert.equal(events[2].shiftKey, false);
 });
 
 test('Cancel button keeps native Enter behavior', () => {
@@ -47,7 +57,7 @@ test('modified navigation is left to remapped browser commands', () => {
 });
 
 
-test('plain F and Shift+F preserve direction while loading, including repeats', () => {
+test('plain F and Shift+F are buffered as the same navigation key, including repeats', () => {
   const { window, handlers } = capture();
   const presses = [{ key: 'f', code: 'KeyF' }, { key: 'f', repeat: true }, { key: 'F', code: 'KeyF', shiftKey: true }];
   for (const press of presses) handlers.keydown({ ...press, preventDefault() {} });
@@ -64,5 +74,18 @@ test('modified F cannot also navigate through the popup input path', () => {
   for (const modifiers of [{ altKey: true }, { altKey: true, shiftKey: true }, { ctrlKey: true }, { metaKey: true }]) {
     handlers.keydown({ key: 'ƒ', code: 'KeyF', ...modifiers, preventDefault() { throw new Error('Accelerator intercepted'); } });
   }
+  assert.equal(window.flytabInput.pending.length, 0);
+});
+
+
+test('Escape works while Option and Shift are still held', () => {
+  const { window, handlers } = capture();
+  handlers.keydown({ key: 'Escape', altKey: true, shiftKey: true, preventDefault() {} });
+  assert.equal(window.flytabInput.pending[0].key, 'Escape');
+});
+
+test('unrelated key releases cannot commit a fallback list', () => {
+  const { window, handlers } = capture();
+  for (const key of ['ArrowUp', 'Enter', 'Escape', 'a']) handlers.keyup({ key });
   assert.equal(window.flytabInput.pending.length, 0);
 });

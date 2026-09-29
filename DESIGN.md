@@ -54,7 +54,9 @@ One flat list with a native OS frame. No nested cards, decorative gradients, or 
 
 ## Components
 
-The authored listbox in popup.js presents selection; background.js owns frozen order and selected index. Option+Shift+F opens the list. F/Option+F advances and Shift+F/Option+Shift+F reverses. Arrow keys and wheel also preview, Enter/click commit, Escape/cancel close. Releasing Option never commits. Outside the list, Option+F immediately toggles to the previous MRU tab. Within the list it advances the preview; the toolbar button remains an immediate toggle. ARIA active descendant follows the selected option. Focus starts on the listbox; Tab can reach Cancel, where Enter activates the native button. Pointer hover does not alter selection. No animation delays keyboard input.
+The authored listbox in popup.js presents selection; background.js owns frozen order and selected index. Hold Option+Shift and press F to open, then keep both modifiers held while tapping F to move forward. Shift never reverses F. Release both modifiers to commit and close; releasing F while modifiers remain held does not commit. Both registered commands advance within the list and wrap. Escape/cancel closes without committing, including while modifiers are held. Enter/click remain available if Chrome misses release before popup focus. Arrows without modifiers and the wheel also preview. Outside the list, Option+F immediately toggles; the toolbar remains an immediate toggle.
+
+ARIA active descendant follows the selected option. Focus starts on the listbox; Tab can reach Cancel, where Enter activates the native button. Pointer hover does not alter selection. The footer explains forward F navigation and release to switch. No animation delays keyboard input.
 
 Loading reserves five rows. Empty state explains that another tab must be visited. Inline errors use an ARIA alert and allow Escape; expired windows can be closed. No modal alerts or confirmation dialogs.
 
@@ -63,4 +65,4 @@ Loading reserves five rows. Empty state explains that another tab must be visite
 - Keep titles dominant and selection unmistakable.
 - Preserve selection order until commit; never activate on hover or arrow navigation.
 - Do not add remote imagery, fonts, or analytics.
-- Keep the primary toggle immediate; do not wait for modifier release or use release to commit the optional list.
+- Keep the primary toggle immediate. In the list, wait for all modifier keys to be released before committing; never guess release with a timer.

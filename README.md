@@ -9,34 +9,41 @@ Jump straight back to the Chrome tab you were just on, across windows. A minimal
 3. Pin Flytab from Chrome's Extensions menu if you want the toolbar shortcut.
 4. Open `chrome://extensions/shortcuts`. Confirm **Switch to previous tab** is **Option+F** and **Open recent tabs** is **Option+Shift+F** on macOS. If it is blank or conflicts with another shortcut, assign one. Keep its scope **In Chrome**.
 
-After updating, click **Reload** on Flytab's extension card and confirm version **0.2.1**. Existing shortcut assignments are preserved; check the shortcuts page if you previously remapped them. No separate app is needed.
+After updating, click **Reload** on Flytab's extension card and confirm version **0.3.0**. Existing shortcut assignments are preserved; check the shortcuts page if you previously remapped them. No separate app is needed.
 
 ## Use
 
-**Tap Option+F to go straight to the previous tab. Tap it again to return.** It switches on command press with no popup, confirmation, or modifier-release wait. The toolbar icon does the same thing.
+**Tap Option+F to go straight to the previous tab. Tap it again to return.** This action and the toolbar button switch immediately, with no popup or release wait.
+
+To choose an older tab:
+
+1. Hold **Option+Shift**, then press **F** to open the list with your previous tab selected.
+2. Keep **both Option and Shift held**. Tap **F** again for each older entry.
+3. Release **Option and Shift** to activate the highlighted tab and close the list.
+
+Shift is part of the opening shortcut; it never reverses direction. Releasing F between taps does not commit while a modifier remains held. Releasing just one modifier also leaves the list open; the last modifier release commits.
 
 | Action | Result |
 |---|---|
-| Option+F with list closed / toolbar click | Immediately toggles between the two most recent tabs |
-| Option+Shift+F | Opens the optional recent-tabs list, selecting the previous tab |
-| F / Option+F with list open | Selects the next older entry; repeat to keep browsing |
-| Shift+F / Option+Shift+F with list open | Selects the previous entry |
-| Arrow keys / mouse wheel | Also browses the list without activating tabs |
-| Enter / click an entry | Activates the selected tab and closes the list |
-| Esc / Cancel / close window | Cancels the list |
-| Release Option | No action; the optional list stays open |
+| Option+F with list closed / toolbar click | Immediately toggles the two most recent tabs |
+| Option+Shift+F with list closed | Opens the list, selecting the previous tab |
+| Repeat Option+Shift+F while list is open | Moves forward through older entries, wrapping at the end |
+| Release both Option and Shift | Activates the highlighted tab and closes the list |
+| Esc / Cancel / close window | Cancels, including Esc while holding the shortcut |
+| Enter / click an entry | Also activates it; available if Chrome misses the release |
+| Mouse wheel / unmodified arrow keys | Browses the list; Up or scrolling up moves back |
 
-The five-row list scrolls through the full MRU history. The starting tab appears last, labeled Current. A commit focuses the destination window, places the destination first, and puts the source second. Opening another window/app dismisses the list without committing. Open with Option+Shift+F, release Shift, and keep pressing F to browse forward. You may keep Option held or release it. Add Shift to go back. Selection wraps at either end; Enter/click commits it.
+The five-row list scrolls through the full MRU history, with the starting tab last, labeled Current. Preview never activates a tab or changes MRU. A commit focuses the destination window, puts the destination first, and puts the source second. Switching to another window/app cancels the list.
 
-Other desktop platforms default to **Alt+Q / Alt+Shift+Q**, avoiding Chrome's Alt+F menu shortcut. Both commands are remappable. “Global MRU” means across Chrome windows, not a system-wide keyboard hook. When the list is closed, repeated Option+F toggles your last two tabs. Once the list is open, repeated F or the primary shortcut browses older entries; the secondary shortcut reverses direction. Plain F/Shift+F remain available if you remap the shortcuts.
+Both registered shortcuts move forward while the list is open. Plain F and Shift+F also move forward; releasing F when no modifiers are held commits. Other desktop platforms default to **Alt+Q / Alt+Shift+Q** to avoid Chrome's menu shortcut. Commands remain remappable: hold your configured modifiers while repeating the list shortcut, then release them to select. “Global MRU” means across Chrome windows, not a system-wide keyboard hook.
 
-## Why quick switching no longer opens a popup
+## Chrome's release-event limit
 
-The original prototype tried to commit when Option was released. Quick taps could release Option before Chrome created and focused the popup, leaving it waiting for Enter. This was reproduced in native UI automation and confirmed by physical-keyboard testing from the user.
+The popup captures releases as its first synchronous script and buffers them while the rest of its UI loads. It checks the actual modifier flags on release events instead of guessing with a timeout. Once the list is open and receiving keys, the intended interaction is hold, cycle, release to select.
 
-Version 0.2.0 removes that timing dependency: the main shortcut directly activates the previous tab in the background worker. Quick native macOS shortcut taps passed with both a running worker and a stopped worker that Chrome had to wake. Chrome must still deliver the shortcut, and worker startup can add a brief delay; this is not a measured latency guarantee.
+**If you release the entire opening shortcut before Chrome creates/focuses the popup, Chrome can still miss that release.** The list then remains open for Enter/click or another received release. A shortcut invocation does not include the current physical key state, and the extension cannot replay events that happened before its window received input. This was reproduced in the original prototype and confirmed by the user's physical-keyboard testing. Use Option+F for an immediate previous-tab tap; the visual shortcut is for holding while choosing.
 
-The optional list uses explicit Enter/click confirmation. There is no modifier-release guess, timeout, content-script overlay, or native helper. It is a compact Chrome popup window with an OS title bar. See [TESTING.md](TESTING.md) for evidence and manual checks.
+The list uses a compact native Chrome popup window with an OS title bar. No separate helper app, content scripts, or release-guessing timer is used. [TESTING.md](TESTING.md) distinguishes synthetic release checks from native shortcut observations.
 
 ## Privacy and permissions
 

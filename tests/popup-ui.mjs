@@ -33,7 +33,7 @@ try {
       }
       if(op==='cancel') state.cancelled=true;
       return {ok:true,snapshot:structuredClone(snapshot)};
-    }},commands:{async getAll(){return [{name:'switch-previous',shortcut:'Alt+Shift+F'},{name:'switch-next',shortcut:'Alt+F'}];}}};
+    }},commands:{async getAll(){return new URL(location.href).searchParams.has('remappedEndpoints') ? [{name:'switch-previous',shortcut:'Alt+Home'},{name:'switch-next',shortcut:'Alt+End'}] : [{name:'switch-previous',shortcut:'Alt+Shift+F'},{name:'switch-next',shortcut:'Alt+F'}];}}};
   });
   await page.goto('https://flytab.test/popup.html?session=fixture&surface=action');
   await page.waitForSelector('[aria-selected="true"]');
@@ -92,6 +92,14 @@ try {
     return box.top>=list.top-1 && box.bottom<=list.bottom+1;
   }),true,'enlarged selected row remains fully visible');
   pass('200% text-only stress fits rows and scrolls active options into view');
+  await page.goto('https://flytab.test/popup.html?session=fixture&remappedEndpoints=1');
+  await page.waitForSelector('[aria-selected="true"]');
+  await page.keyboard.press('End');
+  await page.waitForFunction(()=>document.querySelector('#tabs').getAttribute('aria-activedescendant')==='tab-8');
+  await page.keyboard.press('Home');
+  await page.waitForFunction(()=>document.querySelector('#tabs').getAttribute('aria-activedescendant')==='tab-1');
+  assert.equal(await page.evaluate(()=>window.fixture.closed),false);
+  pass('plain Home/End preview without committing when commands are remapped to those keys');
   await page.goto('https://flytab.test/popup.html?session=fixture&failStartup=1');
   await page.waitForFunction(()=>!document.querySelector('#error').hidden);
   assert.match(await page.locator('#hint').textContent(),/open Flytab again/);

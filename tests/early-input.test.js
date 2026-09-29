@@ -237,3 +237,19 @@ test('Home/End are buffered without intercepting unrelated modified chords or th
   }
   assert.deepEqual(Array.from(window.flytabInput.pending,event=>event.key),['Home','End']);
 });
+
+
+test('plain Home/End releases never commit when their keys are also remapped shortcuts', async () => {
+  for (const key of ['Home','End']) {
+    const {window,handlers}=capture(undefined,[{name:'switch-previous',shortcut:'Alt+'+key}]);
+    await window.flytabInput.shortcutsReady;
+    handlers.keydown({key,code:key,preventDefault(){}});
+    handlers.keyup({key,code:key});
+    assert.equal(window.flytabInput.pending.length,1);
+    assert.equal(window.flytabInput.pending[0].key,key);
+    handlers.keydown({key,code:key,altKey:true,preventDefault(){}});
+    handlers.keyup({key,code:key});
+    assert.equal(window.flytabInput.pending[1].key,'f');
+    assert.equal(window.flytabInput.pending[2].type,'keyup','configured chord retains release recovery');
+  }
+});

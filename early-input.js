@@ -11,6 +11,7 @@
     input.handle?.({ type: 'blur' });
   });
   const modifiers = ['Alt', 'Shift', 'Control', 'Meta', 'AltGraph'];
+  const endpointPreviews = new Set();
   // commands.getAll uses macOS glyphs (⌥⇧F) or named modifiers (Alt+Shift+F).
   // Match physical letter keys as well as event.key: Option can produce Ï/ƒ.
   function shortcutBinding(text) {
@@ -34,10 +35,14 @@
   for (const type of ['keydown', 'keyup']) {
     window.addEventListener(type, event => {
       if (event.isComposing) return;
+      const isEndpoint = event.key === 'Home' || event.key === 'End';
       const isF = event.code === 'KeyF' || event.key?.toLowerCase() === 'f';
       const isShortcut = input.shortcuts.some(binding => bindingMatches(event, binding));
       const isShortcutKey = input.shortcuts.some(binding => bindingKeyMatches(event, binding));
       if (type === 'keyup') {
+        // Plain Home/End always preview, even when the same physical key is
+        // also a configured modified shortcut. Its keyup must not commit.
+        if (isEndpoint && endpointPreviews.delete(event.key)) return;
         // Releasing F alone while modifiers remain held must not commit.
         // F keyup also recovers a missed modifier release if all are now up.
         if (!isF && !isShortcutKey && !modifiers.includes(event.key)) return;
@@ -50,7 +55,11 @@
         // suspended. Handling the chord here avoids Chrome swallowing keyups
         // after an accelerator. Before handoff Chrome consumes it before DOM.
         if (!confirmOrCancel && !isShortcut && (event.altKey || event.ctrlKey || event.metaKey)) return;
-        if (['Home', 'End'].includes(event.key) && event.shiftKey && !isShortcut) return;
+        if (isEndpoint && event.shiftKey && !isShortcut) return;
+        if (isEndpoint) {
+          if (isShortcut) endpointPreviews.delete(event.key);
+          else endpointPreviews.add(event.key);
+        }
         if (!isF && !isShortcut && !['Escape', 'Enter', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
         event.preventDefault();
       }

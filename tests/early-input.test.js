@@ -45,3 +45,24 @@ test('modified navigation is left to remapped browser commands', () => {
   handlers.keydown({ key: 'ArrowDown', altKey: true, preventDefault() { throw new Error('Accelerator intercepted'); } });
   assert.equal(window.flytabInput.pending.length, 0);
 });
+
+
+test('plain F and Shift+F preserve direction while loading, including repeats', () => {
+  const { window, handlers } = capture();
+  const presses = [{ key: 'f', code: 'KeyF' }, { key: 'f', repeat: true }, { key: 'F', code: 'KeyF', shiftKey: true }];
+  for (const press of presses) handlers.keydown({ ...press, preventDefault() {} });
+  const pending = window.flytabInput.pending;
+  assert.equal(pending.length, 3);
+  assert.ok(pending.every(event => event.key === 'f'));
+  assert.equal(pending[0].shiftKey, false);
+  assert.equal(pending[1].repeat, true);
+  assert.equal(pending[2].shiftKey, true);
+});
+
+test('modified F cannot also navigate through the popup input path', () => {
+  const { window, handlers } = capture();
+  for (const modifiers of [{ altKey: true }, { altKey: true, shiftKey: true }, { ctrlKey: true }, { metaKey: true }]) {
+    handlers.keydown({ key: 'ƒ', code: 'KeyF', ...modifiers, preventDefault() { throw new Error('Accelerator intercepted'); } });
+  }
+  assert.equal(window.flytabInput.pending.length, 0);
+});

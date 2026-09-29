@@ -54,7 +54,7 @@ One flat list with a native OS frame. No nested cards, decorative gradients, or 
 
 ## Components
 
-The authored listbox in popup.js presents selection; background.js owns frozen order and selected index. Option+Shift+F opens the list. Arrow keys and wheel preview, Enter/click commit, Escape/cancel close. Releasing Option never commits. The primary Option+F shortcut and toolbar button immediately toggle to the previous MRU tab; they dismiss any open list and ignore its preview. ARIA active descendant follows the selected option. Focus starts on the listbox; Tab can reach Cancel, where Enter activates the native button. Pointer hover does not alter selection. No animation delays keyboard input.
+The authored listbox in popup.js presents selection; background.js owns frozen order and selected index. Option+Shift+F opens the list. F/Option+F advances and Shift+F/Option+Shift+F reverses. Arrow keys and wheel also preview, Enter/click commit, Escape/cancel close. Releasing Option never commits. Outside the list, Option+F immediately toggles to the previous MRU tab. Within the list it advances the preview; the toolbar button remains an immediate toggle. ARIA active descendant follows the selected option. Focus starts on the listbox; Tab can reach Cancel, where Enter activates the native button. Pointer hover does not alter selection. No animation delays keyboard input.
 
 Loading reserves five rows. Empty state explains that another tab must be visited. Inline errors use an ARIA alert and allow Escape; expired windows can be closed. No modal alerts or confirmation dialogs.
 

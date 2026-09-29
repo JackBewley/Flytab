@@ -106,8 +106,8 @@ async function sourceTab() {
     ?.find(item => item.active && eligible(item, ORIGIN));
 }
 
-async function quickSwitch() {
-  const { state, tabs } = await read();
+async function quickSwitch(current) {
+  const { state, tabs } = current || await read();
   // Resolve the source when this queued operation runs. The tab supplied with
   // an earlier command event can already be stale after another quick toggle.
   const source = await sourceTab() || tabs.find(tab => tab.id === state.session?.sourceId);
@@ -123,20 +123,26 @@ async function quickSwitch() {
 
 async function command(name) {
   // Retain the original command IDs so existing shortcut assignments survive
-  // reloads. Option+F is now an immediate toggle; Option+Shift+F opens the list.
-  if (name === 'switch-next') return await quickSwitch();
-  if (name !== 'switch-previous') return;
-  const { state } = await read();
+  // reloads. Outside the list, Option+F toggles and Option+Shift+F opens it.
+  if (!['switch-next', 'switch-previous'].includes(name)) return;
+  const current = await read();
+  const { state } = current;
   if (state.session) {
     // A crashed/closed window must never leave the command stuck in navigation.
     try { await chrome.windows.get(state.session.windowId); }
     catch { state.session = null; await save(state); }
   }
   if (state.session) {
+    // Chrome owns modified shortcuts; the popup handles only plain F/Shift+F
+    // so one physical press cannot advance through both event paths.
+    state.session = step(state.session, name === 'switch-next' ? 1 : -1);
+    state.session.revision++;
+    await save(state);
     await chrome.windows.update(state.session.windowId, { focused: true });
     await broadcast(state);
     return;
   }
+  if (name === 'switch-next') return await quickSwitch(current);
   const source = await sourceTab();
   if (!source) return;
   state.order = promote(state.order, source.id);

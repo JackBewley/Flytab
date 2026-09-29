@@ -7,10 +7,12 @@
     if (event.isComposing) return;
     // Preserve native Enter activation on Cancel.
     if (event.key === 'Enter' && event.target?.closest?.('button')) return;
-    if (!['Escape', 'Enter', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.key)) return;
-    // Remapped browser accelerators own modified key combinations.
+    // Chrome owns Option+F / Option+Shift+F and remapped accelerators.
+    // Handling modified F here too could navigate twice for a single press.
     if (event.altKey || event.ctrlKey || event.metaKey) return;
-    const data = { type: 'keydown', key: event.key, repeat: event.repeat,
+    const isF = event.code === 'KeyF' || event.key?.toLowerCase() === 'f';
+    if (!isF && !['Escape', 'Enter', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.key)) return;
+    const data = { type: 'keydown', key: isF ? 'f' : event.key, shiftKey: Boolean(event.shiftKey), repeat: event.repeat,
       time: Math.round(performance.now()) };
     input.trace.push(data);
     if (input.trace.length > 80) input.trace.shift();

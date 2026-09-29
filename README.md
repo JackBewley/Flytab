@@ -9,7 +9,7 @@ Jump straight back to the Chrome tab you were just on, across windows. A minimal
 3. Pin Flytab from Chrome's Extensions menu if you want the toolbar shortcut.
 4. Open `chrome://extensions/shortcuts`. Confirm **Switch to previous tab** is **Option+F** and **Open recent tabs** is **Option+Shift+F** on macOS. If it is blank or conflicts with another shortcut, assign one. Keep its scope **In Chrome**.
 
-After updating, click **Reload** on Flytab's extension card and confirm version **0.2.0**. Existing shortcut assignments are preserved; check the shortcuts page if you previously remapped them. No separate app is needed.
+After updating, click **Reload** on Flytab's extension card and confirm version **0.2.1**. Existing shortcut assignments are preserved; check the shortcuts page if you previously remapped them. No separate app is needed.
 
 ## Use
 
@@ -17,17 +17,18 @@ After updating, click **Reload** on Flytab's extension card and confirm version 
 
 | Action | Result |
 |---|---|
-| Option+F / toolbar click | Immediately toggles between the two most recent tabs |
+| Option+F with list closed / toolbar click | Immediately toggles between the two most recent tabs |
 | Option+Shift+F | Opens the optional recent-tabs list, selecting the previous tab |
-| Arrow keys / mouse wheel | Browses the list without activating tabs |
+| F / Option+F with list open | Selects the next older entry; repeat to keep browsing |
+| Shift+F / Option+Shift+F with list open | Selects the previous entry |
+| Arrow keys / mouse wheel | Also browses the list without activating tabs |
 | Enter / click an entry | Activates the selected tab and closes the list |
 | Esc / Cancel / close window | Cancels the list |
 | Release Option | No action; the optional list stays open |
-| Option+F while the list is open | Dismisses the list and toggles to the actual previous tab, ignoring the preview |
 
-The five-row list scrolls through the full MRU history. The starting tab appears last, labeled Current. A commit focuses the destination window, places the destination first, and puts the source second. Opening another window/app dismisses the list without committing. Repeating Option+Shift+F keeps the existing selection.
+The five-row list scrolls through the full MRU history. The starting tab appears last, labeled Current. A commit focuses the destination window, places the destination first, and puts the source second. Opening another window/app dismisses the list without committing. Open with Option+Shift+F, release Shift, and keep pressing F to browse forward. You may keep Option held or release it. Add Shift to go back. Selection wraps at either end; Enter/click commits it.
 
-Other desktop platforms default to **Alt+Q / Alt+Shift+Q**, avoiding Chrome's Alt+F menu shortcut. Both commands are remappable. “Global MRU” means across Chrome windows, not a system-wide keyboard hook. Holding F to repeat is no longer a way to browse older tabs; use the separate list when needed.
+Other desktop platforms default to **Alt+Q / Alt+Shift+Q**, avoiding Chrome's Alt+F menu shortcut. Both commands are remappable. “Global MRU” means across Chrome windows, not a system-wide keyboard hook. When the list is closed, repeated Option+F toggles your last two tabs. Once the list is open, repeated F or the primary shortcut browses older entries; the secondary shortcut reverses direction. Plain F/Shift+F remain available if you remap the shortcuts.
 
 ## Why quick switching no longer opens a popup
 

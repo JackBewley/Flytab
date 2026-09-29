@@ -50,15 +50,15 @@ With Node 20+:
 npm test
 ```
 
-Optional isolated-browser suites, run sequentially:
+Reproducible development setup and isolated-browser suites (run sequentially):
 
 ```sh
-npm install --no-save --no-package-lock playwright-core
-CHROME_PATH="/absolute/path/to/Chrome for Testing/executable" node tests/browser.mjs
-CHROME_PATH="/absolute/path/to/Chrome for Testing/executable" node tests/action-popup.mjs
+npm ci
+npm run browser:install
+npm run test:all
 ```
 
-Use Chrome for Testing or Chromium, which accept automated unpacked-extension loading. Set `FLYTAB_EVIDENCE` for screenshots/results; `PLAYWRIGHT_MODULE` can point to an existing Playwright Core module. The harnesses copy runtime files, add private hooks to that copy, and remove their temporary copy/profile afterward. The action suite pins only its disposable extension. Flytab has no Node, npm, or Playwright runtime dependency.
+The lockfile pins Playwright Core 1.63.0; `browser:install` installs its Chrome for Testing 153.0.8010.12 (revision 1243). `test:all` runs unit, native-window, pinned-action, and popup DOM/recovery checks sequentially. Use `CHROME_PATH` to test another explicit Chrome for Testing or Chromium executable; record that version with the results. Set `FLYTAB_EVIDENCE` for screenshots/results; `PLAYWRIGHT_MODULE` can point to an existing Playwright Core module. The harnesses copy runtime files, add private hooks to that copy, and remove their temporary copy/profile afterward. The action suite pins only its disposable extension. Flytab has no Node, npm, or Playwright runtime dependency. Packaging uses Python 3’s standard library: `npm run package` validates permissions, icon sizes, matching versions, a fixed 16-file allowlist, and archive contents. Repeating it on unchanged sources produces the same ZIP.
 
 ## Manual check
 

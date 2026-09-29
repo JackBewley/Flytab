@@ -224,3 +224,16 @@ test('reclaim after a failed commit replaces ownership without treating the old 
   assert.equal(h.window.flytabInput.ownsCommands, true);
   assert.equal(h.timers.size, 1);
 });
+
+test('Home/End are buffered without intercepting unrelated modified chords or their releases', async () => {
+  const {window,handlers} = capture();
+  await window.flytabInput.shortcutsReady;
+  for (const key of ['Home','End']) {
+    handlers.keydown({key,preventDefault(){}});
+    handlers.keyup({key});
+    for (const modifiers of [{altKey:true},{ctrlKey:true},{metaKey:true},{shiftKey:true}]) {
+      handlers.keydown({key,...modifiers,preventDefault(){throw Error('Modified navigation intercepted');}});
+    }
+  }
+  assert.deepEqual(Array.from(window.flytabInput.pending,event=>event.key),['Home','End']);
+});

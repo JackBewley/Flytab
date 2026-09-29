@@ -96,6 +96,19 @@ try {
   pass('six queued rapid toggles alternate correctly despite a stale event tab');
   await invoke();
   let page=await popup();
+  if (process.env.FLYTAB_NATIVE_CHECK === '1') {
+    const {createInterface} = await import('node:readline');
+    console.log('Native fallback ready. Commands: inspect, open, trace, quit.');
+    for await (const line of createInterface({input:process.stdin,terminal:false})) {
+      if(line.trim()==='quit') {await context.close();await rm(scratch,{recursive:true,force:true});process.exit(0);}
+      if(line.trim()==='open') {
+        await worker.evaluate(id=>chrome.windows.update(id,{focused:true}),ids.window1);
+        await invoke();page=await popup();
+      }
+      console.log(JSON.stringify({state:await state(),view:await page.evaluate(()=>({trace:window.flytabInput.trace,selected:document.querySelector('#tabs').getAttribute('aria-activedescendant')})).catch(()=>null)}));
+    }
+    throw Error('Native fixture input closed');
+  }
   s=await state();
   assert.equal(s.session.ids[s.session.index],ids.destination);
   assert.deepEqual(s.order,baseline);
@@ -107,6 +120,12 @@ try {
   assert.equal((await state()).session.index,0);
   assert.deepEqual((await state()).order,baseline);
   pass('arrows preview without changing MRU');
+  await input(page,'End');
+  assert.equal((await state()).session.index,(await state()).session.ids.length-1);
+  await input(page,'Home');
+  assert.equal((await state()).session.index,0);
+  assert.deepEqual((await state()).order,baseline);
+  pass('Home/End navigate native popup endpoints without committing or reordering MRU');
   assert.ok(await page.evaluate(()=>{
     const rows=[...document.querySelectorAll('[role=option]')];
     return rows.length===window.flytabTestRows.length &&
@@ -330,6 +349,15 @@ try {
     assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
     await page.screenshot({path:join(evidence,'narrow.png')});
   }
+  const popupTabId=await page.evaluate(async()=>(await chrome.tabs.getCurrent()).id);
+  await worker.evaluate(id=>chrome.tabs.setZoom(id,2),popupTabId);
+  await pause(100);
+  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,'200% browser zoom must not create horizontal overflow');
+  await input(page,'End');
+  assert.equal((await state()).session.index,(await state()).session.ids.length-1);
+  await input(page,'Home');
+  await worker.evaluate(id=>chrome.tabs.setZoom(id,1),popupTabId);
+  pass('native popup supports 200% browser zoom and endpoint navigation');
   assert.deepEqual(errors,[]);
   pass('popup has no page errors; narrow viewport does not overflow');
   await input(page,'Escape');

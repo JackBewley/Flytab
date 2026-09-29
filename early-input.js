@@ -50,7 +50,8 @@
         // suspended. Handling the chord here avoids Chrome swallowing keyups
         // after an accelerator. Before handoff Chrome consumes it before DOM.
         if (!confirmOrCancel && !isShortcut && (event.altKey || event.ctrlKey || event.metaKey)) return;
-        if (!isF && !isShortcut && !['Escape', 'Enter', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.key)) return;
+        if (['Home', 'End'].includes(event.key) && event.shiftKey && !isShortcut) return;
+        if (!isF && !isShortcut && !['Escape', 'Enter', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
         event.preventDefault();
       }
       const data = { type, key: isF || isShortcut ? 'f' : event.key, repeat: Boolean(event.repeat),

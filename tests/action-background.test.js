@@ -13,6 +13,7 @@ function deferred() {
 }
 function harness() {
   const origin = 'chrome-extension://flytab/';
+  const otherStorage = {};
   const calls = [], listeners = {}, faults = {}, contexts = [];
   const windows = new Map([[10, {id:10, focused:true, width:1200, height:900}]]);
   const tabs = [{id:1, windowId:10, active:true, url:'https://source.example'},
@@ -26,10 +27,11 @@ function harness() {
   const record = (name, fn) => async (...args) => {calls.push({name,args}); return await fn(...args);};
   const chrome = {
     storage: {session: {
-      get: record('storage.get', async () => ({flytab:structuredClone(state)})),
+      get: record('storage.get', async () => ({...otherStorage,flytab:structuredClone(state)})),
       set: record('storage.set', async value => {
         if (faults.saveOnce) {faults.saveOnce = false; throw Error('Save failed');}
-        state = structuredClone(value.flytab);
+        if ('flytab' in value) state = structuredClone(value.flytab);
+        else Object.assign(otherStorage, value);
       })
     }},
     tabs: {
@@ -438,4 +440,43 @@ test('worker restart synchronously restores shortcuts and accepts safe cancellat
   assert.equal(h.state.session,null);
   assert.deepEqual(Array.from(h.state.order),[1,2]);
   assert.equal(typeof h.listeners.command,'function');
+});
+
+test('toolbar recovery survives worker restart and clears badge/title after immediate switching', async () => {
+  const h = harness();
+  h.faults.saveOnce = true;
+  await assert.rejects(h.open(), /Save failed/);
+  assert.ok(h.calls.some(call => call.name === 'action.setBadgeText' && call.args[0].text === '!'));
+  h.restartWorker();
+  h.calls.length = 0;
+  await h.controller.enqueue(() => h.controller.command('switch-next'));
+  await tick();
+  assert.ok(h.calls.some(call => call.name === 'action.setBadgeText' && call.args[0].text === ''));
+  assert.ok(h.calls.some(call => call.name === 'action.setTitle' && call.args[0].title === 'Flytab — previous tab'));
+  h.calls.length = 0;
+  await h.controller.enqueue(() => h.controller.command('switch-next'));
+  assert.equal(h.calls.some(call => call.name === 'action.setTitle' || call.name === 'action.setBadgeText'), false, 'ordinary toggles do no cosmetic API work');
+});
+
+test('successful visual opening clears both error indicators without adding normal-path writes', async () => {
+  const h = harness();
+  h.faults.saveOnce = true;
+  await assert.rejects(h.open(), /Save failed/);
+  h.calls.length = 0;
+  await h.open();
+  await tick();
+  assert.ok(h.calls.some(call => call.name === 'action.setTitle' && call.args[0].title === 'Flytab — previous tab'));
+  assert.ok(h.calls.some(call => call.name === 'action.setBadgeText' && call.args[0].text === ''));
+});
+
+test('Home/End preview resolves against live IDs and never changes MRU', async () => {
+  const h = harness(); await h.open();
+  const order = [...h.state.order];
+  const token = h.state.session.token, sender = h.sender();
+  let response = await h.controller.message({type:'flytab:move',token,edge:'last'},sender);
+  assert.equal(response.snapshot.index,1);
+  response = await h.controller.message({type:'flytab:move',token,edge:'first'},sender);
+  assert.equal(response.snapshot.index,0);
+  assert.deepEqual(h.state.order, order);
+  assert.equal(h.calls.some(call=>call.name==='tabs.update'),false);
 });

@@ -112,6 +112,7 @@ await appendFile(join(extension, 'early-input.js'), String.raw`
       if (await chrome.tabs.getCurrent()) return;
       const list = document.querySelector('#tabs');
       const rows = [...document.querySelectorAll('[role=option]')];
+      if (request.op === 'trace') {respond({ok:true,trace:window.flytabInput.trace});return;}
       if (request.op === 'inspect' || request.op === 'remember') {
         if (request.op === 'remember') rememberedRows = rows;
         respond({ ok: true, token, inputReady, commitPending: Boolean(rejectCommit), disconnected: window.flytabInput.disconnected, ready: inputReady && Boolean(window.flytabInput.handle) && list?.getAttribute('aria-busy') === 'false',
@@ -286,6 +287,26 @@ try {
   assert.equal((await worker.evaluate(() => chrome.windows.getAll())).length, windowCount);
   assert.equal(await worker.evaluate(() => chrome.action.getPopup({})), '');
   pass('pinned command opens a focused action bubble at previous MRU without creating a browser window');
+  await key('End');
+  assert.equal((await state()).session.index,(await state()).session.ids.length-1);
+  await key('Home');
+  assert.equal((await state()).session.index,0);
+  assert.deepEqual((await state()).order,baseline);
+  pass('Home/End navigate action popup endpoints without activation');
+  if (process.env.FLYTAB_NATIVE_CHECK === '1') {
+    const {createInterface} = await import('node:readline');
+    console.log('Native fixture ready. Commands: inspect, open, trace, quit.');
+    for await (const line of createInterface({input:process.stdin,terminal:false})) {
+      if(line.trim()==='quit') {await context.close();await rm(scratch,{recursive:true,force:true});process.exit(0);}
+      if(line.trim()==='open') {
+        await worker.evaluate(id=>chrome.windows.update(id,{focused:true}),ids.window1);
+        await invoke();
+      }
+      if(line.trim()==='trace') console.log(JSON.stringify(await ui('trace')));
+      else console.log(JSON.stringify({state:await state(),view:await ui('inspect').catch(()=>null)}));
+    }
+    throw Error('Native fixture input closed');
+  }
   await ui('remember');
   // A callback already queued during handoff remains a valid one-step command;
   // this direct callback invocation is explicitly not native routing evidence.

@@ -5,6 +5,8 @@ const hint = document.querySelector('#hint');
 const empty = document.querySelector('#empty');
 const position = document.querySelector('#position');
 const early = window.flytabInput;
+const instructions = hint.textContent;
+let errorOperation = null;
 const rows = new Map();
 let current = null;
 let selectedRow = null;
@@ -14,13 +16,27 @@ let wheelTotal = 0;
 let wheelAt = 0;
 
 function receive(response) {
-  if (!response?.ok) throw new Error(response?.error || 'Flytab lost its connection. Close this window and try again.');
+  if (!response?.ok) throw Object.assign(new Error(response?.error || 'Flytab lost its connection. Close this window and try again.'), { expired: response?.expired });
   if (response.snapshot && !finished) render(response.snapshot);
   return response;
 }
 
 async function request(type, extra = {}) {
-  return receive(await chrome.runtime.sendMessage({ type: `flytab:${type}`, token, ...extra }));
+  try {
+    const response = receive(await chrome.runtime.sendMessage({ type: `flytab:${type}`, token, ...extra }));
+    // Only a successful user operation resolves its error. Broadcasts cannot
+    // dismiss a failed commit; explicitly choosing another entry can.
+    if (errorOperation === type || (errorOperation === 'commit' && type === 'move')) {
+      errorOperation = null;
+      error.hidden = true;
+      error.textContent = '';
+      hint.textContent = instructions;
+    }
+    return response;
+  } catch (problem) {
+    problem.operation = type;
+    throw problem;
+  }
 }
 
 // The synchronous input listener already started this request before CSS/UI
@@ -29,10 +45,11 @@ const ready = early.ready.then(receive);
 void ready.catch(problem => { if (!finished) showError(problem); });
 
 function showError(problem) {
+  errorOperation = problem.expired || !current ? 'session' : problem.operation;
   error.textContent = problem.message;
   error.hidden = false;
   list.setAttribute('aria-busy', 'false');
-  hint.textContent = 'Choose another tab, or press Esc to close.';
+  hint.textContent = errorOperation === 'session' ? 'Press Esc to close, then open Flytab again.' : 'Choose another tab, or press Esc to close.';
 }
 
 function sequence(action) {
@@ -129,7 +146,7 @@ function render(snapshot) {
   empty.hidden = snapshot.items.length > 1;
   position.textContent = snapshot.items.length ? `${snapshot.index + 1} of ${snapshot.items.length}` : '';
   list.setAttribute('aria-busy', 'false');
-  hint.textContent = 'F next. Release modifiers to switch. Enter selects. Escape cancels.';
+  if (!errorOperation) hint.textContent = instructions;
 }
 
 async function commit(id) {
@@ -171,6 +188,7 @@ async function input(event) {
     return;
   }
   if (event.key === 'Enter') return await commit();
+  if (event.key === 'Home' || event.key === 'End') return await request('move', { edge: event.key === 'Home' ? 'first' : 'last' });
   if (event.key === 'f') return await request('move', { delta: 1 });
   if (['ArrowDown', 'ArrowRight'].includes(event.key)) return await request('move', { delta: 1 });
   if (['ArrowUp', 'ArrowLeft'].includes(event.key)) return await request('move', { delta: -1 });

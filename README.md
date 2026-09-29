@@ -32,6 +32,7 @@ Shift is part of the opening shortcut; it never reverses direction. Releasing F 
 | Esc / click outside / close window | Cancels, including Esc while holding the shortcut |
 | Enter / click an entry | Also activates it; available if Chrome misses the release |
 | Mouse wheel / unmodified arrow keys | Browses the list; Up or scrolling up moves back |
+| Home / End without modifiers | Previews the first / last entry without switching |
 
 The five-row list scrolls through the full MRU history, with the starting tab last, labeled Current. Preview never activates a tab or changes MRU. A commit focuses the destination window, puts the destination first, and puts the source second. Switching to another window/app cancels the list.
 
@@ -50,7 +51,7 @@ When Flytab is pinned in a supported Chrome version (127+), the list opens benea
 ## Privacy and permissions
 
 - **tabs**: open-tab titles/IDs/window IDs and activation events. Chrome may describe this as reading browsing history; Flytab does not use the History API.
-- **storage**: `storage.session` holds tab IDs, MRU order, and the open switcher's selection. It survives worker suspension and is cleared when Chrome exits or the extension reloads/disables. The popup’s document ID may also be held for sender validation. Titles, URLs and favicons are read live, not persisted by Flytab.
+- **storage**: `storage.session` holds tab IDs, MRU order, and the open switcher's selection. It survives worker suspension and is cleared when Chrome exits or the extension reloads/disables. The popup’s document ID may also be held for sender validation. A boolean records whether the toolbar has a recoverable error. Titles, URLs and favicons are read live, not persisted by Flytab.
 - **favicon**: reads Chrome's local favicon cache via its own extension URL. Loading remote `favIconUrl` images could make network requests, so Flytab never does that. Missing/internal-page icons use a bundled generic tab icon.
 
 No host permissions, content scripts, History API, analytics, server, account, or external network requests. CSP blocks external connections and images. Commands/action/windows APIs require no separate permission entries. Incognito is disabled in the manifest and filtered defensively.

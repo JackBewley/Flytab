@@ -13,6 +13,7 @@ function deferred() {
 }
 function harness() {
   const origin = 'chrome-extension://flytab/';
+  const otherStorage = {};
   const calls = [];
   const listeners = {};
   const event = name => ({
@@ -34,10 +35,11 @@ function harness() {
   const record = (name, fn) => async (...args) => { calls.push({ name, args }); return await fn(...args); };
   const chrome = {
     storage: { session: {
-      get: record('storage.get', async () => ({ flytab: structuredClone(state) })),
+      get: record('storage.get', async () => ({ ...otherStorage, flytab: structuredClone(state) })),
       set: record('storage.set', async value => {
         if (gates.save) await gates.save.promise;
-        state = structuredClone(value.flytab);
+        if ('flytab' in value) state = structuredClone(value.flytab);
+        else Object.assign(otherStorage, value);
       })
     } },
     tabs: {

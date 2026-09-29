@@ -2,6 +2,19 @@ import { eligible, promote, commitOrder, reconstruct, step, pruneSession } from 
 
 const ORIGIN = chrome.runtime.getURL('');
 const STATE_KEY = 'flytab';
+const TOOLBAR_ERROR_KEY = 'flytabToolbarError';
+let toolbarNeedsReset = false;
+
+function resetToolbarError() {
+  if (!toolbarNeedsReset) return;
+  toolbarNeedsReset = false;
+  // No work on the ordinary path, and no waiting for cosmetics after recovery.
+  void Promise.all([
+    chrome.action.setBadgeText({ text: '' }),
+    chrome.action.setTitle({ title: 'Flytab — previous tab' }),
+    chrome.storage.session.set({ [TOOLBAR_ERROR_KEY]: false })
+  ]).catch(() => { toolbarNeedsReset = true; });
+}
 // This is only a mutex. All durable state is in storage.session, including the
 // frozen switcher order, so worker suspension cannot lose history or selection.
 let tail = Promise.resolve();
@@ -38,10 +51,11 @@ async function save(state) {
 async function read({ stored, parent, persist = true } = {}) {
   const [allTabs, values] = await Promise.all([
     chrome.tabs.query({}),
-    stored === undefined ? chrome.storage.session.get(STATE_KEY) : stored
+    stored === undefined ? chrome.storage.session.get([STATE_KEY, TOOLBAR_ERROR_KEY]) : stored
   ]);
   const tabs = allTabs.filter(tab => eligible(tab, ORIGIN));
   const live = new Set(tabs.map(tab => tab.id));
+  toolbarNeedsReset ||= Boolean(values[TOOLBAR_ERROR_KEY]);
   let state = values[STATE_KEY];
   let changed = false;
   if (!state || state.version !== 1) {
@@ -195,6 +209,7 @@ async function activate(state, destinationId, sourceId) {
   state.session = null;
   await save(state);
   await closeSwitcher(session);
+  resetToolbarError();
 }
 
 function sourceIn(window) {
@@ -225,10 +240,11 @@ async function command(name) {
   // capability concurrently before asking Chrome to create/focus the switcher.
   if (!['switch-next', 'switch-previous'].includes(name)) return;
   const [stored, parent, useAction] = await Promise.all([
-    chrome.storage.session.get(STATE_KEY),
+    chrome.storage.session.get([STATE_KEY, TOOLBAR_ERROR_KEY]),
     chrome.windows.getLastFocused({ populate: true }),
     name === 'switch-previous' ? canOpenAction() : false
   ]);
+  toolbarNeedsReset ||= Boolean(stored[TOOLBAR_ERROR_KEY]);
   let state = stored[STATE_KEY];
   if (state?.session) {
     if (state.session.kind === 'action') {
@@ -284,7 +300,7 @@ async function command(name) {
     };
     await save(state);
     // Toolbar cosmetics must not delay the popup's queued initial state request.
-    void chrome.action.setBadgeText({ text: '' }).catch(() => {});
+    resetToolbarError();
   } catch (error) {
     releaseInput(token);
     // Even if history preparation fails first, wait for and close any window
@@ -295,6 +311,8 @@ async function command(name) {
       state.session = null;
       try { await save(state); } catch { /* The next read validates live windows. */ }
     }
+    toolbarNeedsReset = true;
+    await chrome.storage.session.set({ [TOOLBAR_ERROR_KEY]: true }).catch(() => {});
     void chrome.action.setBadgeText({ text: '!' }).catch(() => {});
     void chrome.action.setTitle({ title: 'Flytab could not open — click to switch to the previous tab' }).catch(() => {});
     throw error;
@@ -353,7 +371,9 @@ async function message(request, sender) {
     return { ok: true };
   }
   if (request.type === 'flytab:move') {
-    state.session = step(session, request.delta < 0 ? -1 : 1);
+    state.session = request.edge === 'first' || request.edge === 'last'
+      ? { ...session, index: request.edge === 'first' ? 0 : Math.max(0, session.ids.length - 1) }
+      : step(session, request.delta < 0 ? -1 : 1);
     state.session.revision++;
     await save(state);
     // The requesting popup is the only consumer; one response avoids duplicate

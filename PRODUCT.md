@@ -20,7 +20,7 @@ The legacy command IDs are retained to preserve saved bindings: switch-next togg
 
 ## Brand commitments
 
-Flytab uses a boxed left-arrow icon. Immediate previous-tab switching, with an optional small vertical list of favicons and titles. No letter labels or unnecessary settings.
+Flytab uses a left arrow inside a horizontal tab-window outline, with a restrained gray stroke that complements Chrome navigation controls. Immediate previous-tab switching, with an optional small vertical list of favicons and titles. No letter labels or unnecessary settings.
 
 ## Stack
 

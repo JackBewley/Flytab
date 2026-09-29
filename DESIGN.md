@@ -50,7 +50,7 @@ One flat list with a native OS frame. No nested cards, decorative gradients, or 
 
 ## Shapes
 
-9px rounded selected rows. Favicons keep native proportions. The Flytab mark is a left arrow inside a simple outlined square with subtly softened corners. `icons/icon.svg` is the editable source; Chrome uses PNGs rendered at 16, 32, 48 and 128 pixels. The toolbar uses a medium slate stroke (#738198) on transparency for visibility on light and dark browser toolbars; the switcher mark inherits its existing text color. Selection chevrons remain unchanged.
+9px rounded selected rows. Favicons keep native proportions. The Flytab mark is a left arrow inside a horizontal 20×16 tab-window outline, including a minimal two-tab strip. The whole mark uses a 1.4-unit stroke on a 24-unit canvas, keeping the frame and arrow light enough to accompany Chrome navigation controls. `icons/icon.svg` is the editable source; Chrome uses PNGs rendered at 16, 32, 48 and 128 pixels. Toolbar PNGs use warm neutral gray (#767574) sampled from the supplied reference, with a transparent background; the switcher mark inherits its text color. Selection chevrons remain unchanged.
 
 ## Components
 

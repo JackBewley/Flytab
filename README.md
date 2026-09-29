@@ -9,7 +9,7 @@ Jump straight back to the Chrome tab you were just on, across windows. A minimal
 3. Pin Flytab from Chrome's Extensions menu if you want the toolbar shortcut.
 4. Open `chrome://extensions/shortcuts`. Confirm **Switch to previous tab** is **Option+F** and **Open recent tabs** is **Option+Shift+F** on macOS. If it is blank or conflicts with another shortcut, assign one. Keep its scope **In Chrome**.
 
-After updating, click **Reload** on Flytab's extension card and confirm version **0.3.1**. Existing shortcut assignments are preserved; check the shortcuts page if you previously remapped them. No separate app is needed.
+After updating, click **Reload** on Flytab's extension card and confirm version **0.3.2**. Existing shortcut assignments are preserved; check the shortcuts page if you previously remapped them. No separate app is needed.
 
 ## Use
 

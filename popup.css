@@ -35,7 +35,7 @@
 body { margin: 0; padding: 0 10px; min-width: 240px; }
 header { display: flex; justify-content: space-between; align-items: center; padding: 13px 8px 10px; gap: 16px; }
 h1 { display: flex; align-items: center; gap: 7px; margin: 0; font-size: 1rem; font-weight: 650; letter-spacing: -.02em; }
-h1 svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linejoin: round; stroke-linecap: round; }
+h1 svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.4; stroke-linejoin: round; stroke-linecap: round; }
 #position { color: var(--muted); font: .78rem var(--utility-font); font-variant-numeric: tabular-nums; }
 #tabs { max-height: calc(5 * var(--row-height)); min-height: var(--row-height); overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; border-radius: var(--radius); }
 #tabs[aria-busy="true"] { min-height: calc(5 * var(--row-height)); }

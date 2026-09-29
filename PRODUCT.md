@@ -20,7 +20,7 @@ The legacy command IDs are retained to preserve saved bindings: switch-next togg
 
 ## Brand commitments
 
-Flytab. Immediate previous-tab switching, with an optional small vertical list of favicons and titles. No letter labels or unnecessary settings.
+Flytab uses a boxed left-arrow icon. Immediate previous-tab switching, with an optional small vertical list of favicons and titles. No letter labels or unnecessary settings.
 
 ## Stack
 

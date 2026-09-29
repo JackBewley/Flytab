@@ -9,7 +9,7 @@ Jump straight back to the Chrome tab you were just on, across windows. A minimal
 3. Pin Flytab from Chrome's Extensions menu if you want the toolbar shortcut.
 4. Open `chrome://extensions/shortcuts`. Confirm **Switch to previous tab** is **Option+F** and **Open recent tabs** is **Option+Shift+F** on macOS. If it is blank or conflicts with another shortcut, assign one. Keep its scope **In Chrome**.
 
-After updating, click **Reload** on Flytab's extension card and confirm version **0.3.0**. Existing shortcut assignments are preserved; check the shortcuts page if you previously remapped them. No separate app is needed.
+After updating, click **Reload** on Flytab's extension card and confirm version **0.3.1**. Existing shortcut assignments are preserved; check the shortcuts page if you previously remapped them. No separate app is needed.
 
 ## Use
 
@@ -60,3 +60,5 @@ At startup/installation, Flytab seeds from open tabs sorted by `lastAccessed`, w
 `background.js` owns serialized session state and browser actions; `core.js` holds MRU rules; `early-input.js` captures early keyboard events; `popup.*` implements the switcher. Run `npm test` with Node 20+ for unit tests. Optional isolated-browser tests and remaining manual checks are in [TESTING.md](TESTING.md).
 
 API references: [Commands](https://developer.chrome.com/docs/extensions/reference/api/commands), [Tabs / lastAccessed](https://developer.chrome.com/docs/extensions/reference/api/tabs), [Windows](https://developer.chrome.com/docs/extensions/reference/api/windows), [cached favicons](https://developer.chrome.com/docs/extensions/how-to/ui/favicons).
+
+The icon source is `icons/icon.svg`. Chrome uses the bundled 16/32/48/128px PNGs. To regenerate them for development, run `python3 scripts/render-icons.py` with Pillow installed; the extension needs no image-rendering dependency.

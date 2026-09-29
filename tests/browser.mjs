@@ -15,6 +15,7 @@ for (const name of ['manifest.json', 'background.js', 'core.js', 'early-input.js
   'popup.html', 'popup.js', 'popup.css', 'tab.svg']) {
   await cp(join(source, name), join(extension, name));
 }
+await cp(join(source, 'icons'), join(extension, 'icons'), { recursive: true });
 await appendFile(join(extension, 'background.js'), '\nglobalThis.flytabTest = { command, enqueue, read };\n');
 const context = await chromium.launchPersistentContext(join(scratch, 'profile'), {
   executablePath: process.env.CHROME_PATH,

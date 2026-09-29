@@ -50,7 +50,7 @@ One flat list with a native OS frame. No nested cards, decorative gradients, or 
 
 ## Shapes
 
-9px rounded selected rows. Favicons keep native proportions. Small authored geometric plane and chevron icons; no raster illustration is needed.
+9px rounded selected rows. Favicons keep native proportions. The Flytab mark is a left arrow inside a simple outlined square with subtly softened corners. `icons/icon.svg` is the editable source; Chrome uses PNGs rendered at 16, 32, 48 and 128 pixels. The toolbar uses a medium slate stroke (#738198) on transparency for visibility on light and dark browser toolbars; the switcher mark inherits its existing text color. Selection chevrons remain unchanged.
 
 ## Components
 

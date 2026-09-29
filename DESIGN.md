@@ -28,7 +28,7 @@ spacing:
 
 ## Overview
 
-A native selection menu for frequent keyboard use. The blue selected row and small directional mark carry the identity. Operate mode; task speed and familiar keyboard behavior take priority. This is a tightly specified desktop popup, not a marketing surface. English UI; tab titles retain their original script. No market-specific assumptions.
+An optional native selection menu complements the primary instant previous-tab toggle. The blue selected row and small directional mark carry the identity. Operate mode; task speed and familiar keyboard behavior take priority. This is a tightly specified desktop popup, not a marketing surface. English UI; tab titles retain their original script. No market-specific assumptions.
 
 Runtime tokens are canonical in popup.css :root; this file mirrors them. Named color tokens map to matching kebab-case variables (selectedInk → --selected-ink). The media query in popup.css owns dark variants. A second UI theme system must not be added.
 
@@ -54,7 +54,7 @@ One flat list with a native OS frame. No nested cards, decorative gradients, or 
 
 ## Components
 
-The authored listbox in popup.js presents selection; background.js owns frozen order and selected index. Arrow keys and wheel preview, Enter/click commit, Escape/cancel close. ARIA active descendant follows the selected option. Focus starts on the listbox; Tab can reach Cancel, where Enter activates the native button. Pointer hover does not alter selection. No animation delays keyboard input.
+The authored listbox in popup.js presents selection; background.js owns frozen order and selected index. Option+Shift+F opens the list. Arrow keys and wheel preview, Enter/click commit, Escape/cancel close. Releasing Option never commits. The primary Option+F shortcut and toolbar button immediately toggle to the previous MRU tab; they dismiss any open list and ignore its preview. ARIA active descendant follows the selected option. Focus starts on the listbox; Tab can reach Cancel, where Enter activates the native button. Pointer hover does not alter selection. No animation delays keyboard input.
 
 Loading reserves five rows. Empty state explains that another tab must be visited. Inline errors use an ARIA alert and allow Escape; expired windows can be closed. No modal alerts or confirmation dialogs.
 
@@ -63,4 +63,4 @@ Loading reserves five rows. Empty state explains that another tab must be visite
 - Keep titles dominant and selection unmistakable.
 - Preserve selection order until commit; never activate on hover or arrow navigation.
 - Do not add remote imagery, fonts, or analytics.
-- Do not infer modifier state from a timer.
+- Keep the primary toggle immediate; do not wait for modifier release or use release to commit the optional list.

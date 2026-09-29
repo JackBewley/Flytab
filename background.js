@@ -51,8 +51,7 @@ async function snapshot(state) {
     otherWindow: tab.windowId !== session.sourceWindowId,
     current: tab.id === session.sourceId
   }));
-  return { token: session.token, index: session.index, items, shortcuts: session.shortcuts,
-    altRelease: /Alt|Option|⌥/i.test(session.shortcuts.next), revision: session.revision };
+  return { token: session.token, index: session.index, items, revision: session.revision };
 }
 
 function cachedIcon(tab) {
@@ -101,14 +100,32 @@ async function activate(state, destinationId, sourceId) {
   await closeWindow(popupId);
 }
 
-async function sourceTab(tab) {
-  if (tab && eligible(tab, ORIGIN)) return tab;
+async function sourceTab() {
   const windows = await chrome.windows.getAll({ populate: true });
   return windows.find(window => window.focused && !window.incognito)?.tabs
     ?.find(item => item.active && eligible(item, ORIGIN));
 }
 
-async function command(name, tab) {
+async function quickSwitch() {
+  const { state, tabs } = await read();
+  // Resolve the source when this queued operation runs. The tab supplied with
+  // an earlier command event can already be stale after another quick toggle.
+  const source = await sourceTab() || tabs.find(tab => tab.id === state.session?.sourceId);
+  if (!source) return;
+  state.order = promote(state.order, source.id);
+  if (state.order.length > 1) {
+    await activate(state, state.order[1], source.id);
+  } else {
+    await cancel(state, false);
+    await save(state);
+  }
+}
+
+async function command(name) {
+  // Retain the original command IDs so existing shortcut assignments survive
+  // reloads. Option+F is now an immediate toggle; Option+Shift+F opens the list.
+  if (name === 'switch-next') return await quickSwitch();
+  if (name !== 'switch-previous') return;
   const { state } = await read();
   if (state.session) {
     // A crashed/closed window must never leave the command stuck in navigation.
@@ -116,25 +133,17 @@ async function command(name, tab) {
     catch { state.session = null; await save(state); }
   }
   if (state.session) {
-    state.session = step(state.session, name === 'switch-previous' ? -1 : 1);
-    state.session.revision++;
-    await save(state);
+    await chrome.windows.update(state.session.windowId, { focused: true });
     await broadcast(state);
     return;
   }
-  if (name !== 'switch-next') return;
-  const source = await sourceTab(tab);
+  const source = await sourceTab();
   if (!source) return;
   state.order = promote(state.order, source.id);
-  const commands = await chrome.commands.getAll();
   state.session = {
     token: crypto.randomUUID(), sourceId: source.id, sourceWindowId: source.windowId,
     ids: [...state.order.slice(1), source.id], index: 0,
-    revision: 0, windowId: null,
-    shortcuts: {
-      next: commands.find(item => item.name === 'switch-next')?.shortcut || '',
-      previous: commands.find(item => item.name === 'switch-previous')?.shortcut || ''
-    }
+    revision: 0, windowId: null
   };
   await save(state);
   try {
@@ -197,26 +206,17 @@ chrome.runtime.onMessage.addListener((request, sender, respond) => {
   return true;
 });
 
-chrome.commands.onCommand.addListener((name, tab) => {
-  if (['switch-next', 'switch-previous'].includes(name)) void enqueue(() => command(name, tab));
+chrome.commands.onCommand.addListener(name => {
+  if (['switch-next', 'switch-previous'].includes(name)) void enqueue(() => command(name));
 });
 
-chrome.action.onClicked.addListener(tab => {
-  void enqueue(async () => {
-    if (!eligible(tab, ORIGIN)) return;
-    const { state } = await read();
-    await cancel(state, false);
-    state.order = promote(state.order, tab.id);
-    await save(state);
-    if (state.order.length > 1) await activate(state, state.order[1], tab.id);
-  });
-});
+chrome.action.onClicked.addListener(() => { void enqueue(quickSwitch); });
 
 chrome.tabs.onActivated.addListener(({ tabId }) => {
   void enqueue(async () => {
     let tab;
     try { tab = await chrome.tabs.get(tabId); } catch { return; }
-    if (!eligible(tab, ORIGIN)) return;
+    if (!eligible(tab, ORIGIN) || !tab.active) return;
     const window = await chrome.windows.get(tab.windowId);
     // An API-selected tab in an unfocused window is not a global visit.
     if (!window.focused) return;

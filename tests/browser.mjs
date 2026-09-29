@@ -9,7 +9,12 @@ const { chromium } = await import(process.env.PLAYWRIGHT_MODULE || 'playwright-c
 const source = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const scratch = await mkdtemp(join(tmpdir(), 'flytab-test-'));
 const extension = join(scratch, 'Flytab');
-await cp(source, extension, { recursive: true });
+await mkdir(extension);
+// Load only runtime files, not .git, node_modules, packages or browser profiles.
+for (const name of ['manifest.json', 'background.js', 'core.js', 'early-input.js',
+  'popup.html', 'popup.js', 'popup.css', 'tab.svg']) {
+  await cp(join(source, name), join(extension, name));
+}
 await appendFile(join(extension, 'background.js'), '\nglobalThis.flytabTest = { command, enqueue, read };\n');
 const context = await chromium.launchPersistentContext(join(scratch, 'profile'), {
   executablePath: process.env.CHROME_PATH,
@@ -23,7 +28,7 @@ const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 let worker = context.serviceWorkers()[0] || await context.waitForEvent('serviceworker');
 async function state() { return await worker.evaluate(async () => (await chrome.storage.session.get('flytab')).flytab); }
 async function settled() { await pause(120); return await state(); }
-async function invoke(name = 'switch-next') {
+async function invoke(name = 'switch-previous') {
   await worker.evaluate(async name => { const t=flytabTest; await t.enqueue(()=>t.command(name)); }, name);
 }
 async function popup() {
@@ -64,38 +69,73 @@ try {
   assert.ok(!s.order.includes(ignored));
   pass('background-created tab stays out of MRU');
   const baseline=[...s.order];
+  const initialPages=context.pages().length;
+  await invoke('switch-next');
+  s=await settled();
+  assert.equal(s.session,null);
+  assert.deepEqual(s.order.slice(0,2),[ids.destination,ids.source]);
+  assert.equal(context.pages().length,initialPages);
+  assert.equal(await worker.evaluate(async()=>(await chrome.windows.getAll()).find(w=>w.focused)?.id),ids.window2);
+  pass('primary command commits across windows without popup or keyup');
+  await invoke('switch-next');
+  assert.deepEqual((await settled()).order,baseline);
+  pass('second primary command immediately returns to the source tab');
+  const burst=await worker.evaluate(async()=>{
+    const t=flytabTest;
+    const staleTab=(await chrome.tabs.query({active:true,lastFocusedWindow:true}))[0];
+    return await Promise.all(Array.from({length:6},()=>t.enqueue(async()=>{
+      await t.command('switch-next',staleTab);
+      return (await chrome.storage.session.get('flytab')).flytab.order.slice(0,2);
+    })));
+  });
+  burst.forEach((pair,index)=>assert.deepEqual(pair,index%2 ? [ids.source,ids.destination] : [ids.destination,ids.source]));
+  assert.deepEqual((await settled()).order,baseline);
+  assert.equal(context.pages().length,initialPages);
+  pass('six queued rapid toggles alternate correctly despite a stale event tab');
   await invoke();
   let page=await popup();
   s=await state();
   assert.equal(s.session.ids[s.session.index],ids.destination);
   assert.deepEqual(s.order,baseline);
-  assert.ok((await page.locator('#hint').textContent()).includes('Release'));
-  await invoke();
-  assert.equal((await state()).session.index,1);
-  await invoke('switch-previous');
-  assert.equal((await state()).session.index,0);
+  assert.ok(!(await page.locator('#hint').textContent()).includes('Release'));
   await input(page,'ArrowDown');
   assert.equal((await state()).session.index,1);
+  const token=(await state()).session.token;
+  await invoke();
+  assert.equal((await state()).session.index,1);
+  assert.equal((await state()).session.token,token);
+  await input(page,'ArrowUp');
+  assert.equal((await state()).session.index,0);
   assert.deepEqual((await state()).order,baseline);
-  pass('commands and arrows change frozen selection without changing MRU');
+  pass('secondary command preserves an open list; arrows preview without changing MRU');
   await input(page,'Escape');
   assert.equal((await settled()).session,null);
   assert.deepEqual((await state()).order,baseline);
   pass('Escape cancels without a commit');
   await invoke(); page=await popup();
   await input(page,'Alt','keyup',{code:'AltLeft',altKey:false});
+  await pause(500);
+  s=await settled();
+  assert.ok(s.session);
+  assert.deepEqual(s.order,baseline);
+  pass('optional list stays open on Option release with no timer commit');
+  await input(page,'Enter');
   s=await settled();
   assert.equal(s.session,null);
   assert.deepEqual(s.order.slice(0,2),[ids.destination,ids.source]);
   assert.equal(await worker.evaluate(async()=>(await chrome.windows.getAll()).find(w=>w.focused)?.id),ids.window2);
-  pass('synthetic received Alt release commits and focuses the destination window');
+  pass('Enter explicitly commits the list selection and focuses its window');
+  await invoke('switch-next');
+  assert.deepEqual((await settled()).order,baseline);
   await invoke(); page=await popup();
-  await pause(500);
-  assert.ok((await state()).session);
-  pass('no received release leaves popup open; no unsafe timeout commit');
-  await input(page,'Enter');
-  assert.deepEqual((await settled()).order.slice(0,2),[ids.source,ids.destination]);
-  pass('Enter fallback commits and supports repeated toggling');
+  await input(page,'ArrowDown');
+  await invoke('switch-next');
+  s=await settled();
+  assert.equal(s.session,null);
+  assert.deepEqual(s.order.slice(0,2),[ids.destination,ids.source]);
+  pass('primary shortcut dismisses the list and toggles MRU, ignoring its preview');
+  await invoke('switch-next');
+  assert.deepEqual((await settled()).order,baseline);
   await invoke(); page=await popup();
   const closed=(await state()).session.ids[0];
   await worker.evaluate(id=>chrome.tabs.remove(id),closed);
@@ -126,8 +166,6 @@ try {
   await pause(150);
   assert.equal((await state()).session.index,before+1);
   pass('wheel advances selection without activating it');
-  // A browser-owned popup uses real extension CSP and cached favicon endpoint.
-  const remote=await worker.evaluate(async()=>{const s=(await chrome.storage.session.get('flytab')).flytab; return {source:s.session.sourceId,window:s.session.windowId};});
   await input(page,'Escape');
   // Favicon source can be checked without navigating a website or making a remote request.
   const forbidden=await worker.evaluate(()=>chrome.runtime.getManifest().content_security_policy.extension_pages);
@@ -154,6 +192,12 @@ try {
   assert.deepEqual((await state()).order,expected);
   await wake.close();
   pass('MRU survives an actual service worker stop and restart');
+  await invoke('switch-next');
+  assert.deepEqual((await settled()).order.slice(0,2),[expected[1],expected[0]]);
+  assert.equal((await state()).session,null);
+  pass('immediate toggling still works after worker restart');
+  await invoke('switch-next');
+  await settled();
   await invoke(); page=await popup();
   const evidence=process.env.FLYTAB_EVIDENCE;
   if (evidence) {
@@ -170,6 +214,20 @@ try {
   }
   assert.deepEqual(errors,[]);
   pass('popup has no page errors; narrow viewport does not overflow');
+  await input(page,'Escape');
+  const solo=await worker.evaluate(async()=>{
+    const tabs=await chrome.tabs.query({});
+    const active=tabs.find(t=>t.active && !t.url.startsWith(chrome.runtime.getURL('')));
+    await chrome.windows.update(active.windowId,{focused:true});
+    await chrome.tabs.remove(tabs.filter(t=>t.id!==active.id).map(t=>t.id));
+    return active.id;
+  });
+  await settled();
+  await invoke('switch-next');
+  s=await settled();
+  assert.deepEqual(s.order,[solo]);
+  assert.equal(s.session,null);
+  pass('primary shortcut with one tab is a harmless no-op');
   console.log(JSON.stringify({browser:context.browser().version(),passed:results.length,results},null,2));
   if (process.env.FLYTAB_EVIDENCE) await writeFile(join(process.env.FLYTAB_EVIDENCE,'results.json'),JSON.stringify({browser:context.browser().version(),passed:results.length,results},null,2));
 } finally {

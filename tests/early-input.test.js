@@ -12,16 +12,17 @@ function capture() {
   return { window, handlers };
 }
 
-test('release received before the UI module is ready is buffered', () => {
+test('Enter received before the list is ready is buffered', () => {
   const { window, handlers } = capture();
-  handlers.keyup({ key: 'Alt', code: 'AltLeft', altKey: false });
+  handlers.keydown({ key: 'Enter', preventDefault() {} });
   assert.equal(window.flytabInput.pending.length, 1);
-  assert.equal(window.flytabInput.pending[0].key, 'Alt');
-  assert.equal(window.flytabInput.pending[0].type, 'keyup');
+  assert.equal(window.flytabInput.pending[0].key, 'Enter');
 });
 
-test('no event means no inferred release or automatic commit', () => {
-  const { window } = capture();
+test('the list never listens for or commits on modifier release', () => {
+  const { window, handlers } = capture();
+  assert.equal(handlers.keyup, undefined);
+  handlers.keydown({ key: 'Alt', altKey: true });
   assert.equal(window.flytabInput.pending.length, 0);
 });
 
@@ -33,8 +34,14 @@ test('Cancel button keeps native Enter behavior', () => {
   assert.equal(window.flytabInput.pending.length, 0);
 });
 
-test('composing text does not trigger switcher commands', () => {
+test('composing text does not trigger list actions', () => {
   const { window, handlers } = capture();
   handlers.keydown({ key: 'Enter', isComposing: true });
+  assert.equal(window.flytabInput.pending.length, 0);
+});
+
+test('modified navigation is left to remapped browser commands', () => {
+  const { window, handlers } = capture();
+  handlers.keydown({ key: 'ArrowDown', altKey: true, preventDefault() { throw new Error('Accelerator intercepted'); } });
   assert.equal(window.flytabInput.pending.length, 0);
 });

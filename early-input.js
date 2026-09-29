@@ -1,25 +1,21 @@
-// Loaded synchronously before the stylesheet and UI module. Capture release even
-// while the UI is loading; nothing can capture it before this document exists.
+// Capture navigation/confirmation while the optional list is loading.
+// Modifier release has no role: quick toggling runs entirely in the worker.
 (() => {
-  const input = { pending: [], handle: null, trace: [], armed: false };
+  const input = { pending: [], handle: null, trace: [] };
   window.flytabInput = input;
-  for (const type of ['keydown', 'keyup']) {
-    window.addEventListener(type, event => {
-      if (event.isComposing) return;
-      // Let native buttons own Enter; otherwise Tab → Cancel → Enter would
-      // accidentally commit the selected tab instead of cancelling.
-      if (event.key === 'Enter' && event.target?.closest?.('button')) return;
-      const data = { type, key: event.key, code: event.code, altKey: event.altKey,
-        shiftKey: event.shiftKey, metaKey: event.metaKey, ctrlKey: event.ctrlKey,
-        repeat: event.repeat, time: Math.round(performance.now()) };
-      // In-memory, key-only diagnostics. No titles, URLs, storage, or telemetry.
-      input.trace.push(data);
-      if (input.trace.length > 80) input.trace.shift();
-      if (['Escape', 'Enter', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.key)) {
-        event.preventDefault();
-      }
-      if (input.handle) input.handle(data);
-      else input.pending.push(data);
-    }, true);
-  }
+  window.addEventListener('keydown', event => {
+    if (event.isComposing) return;
+    // Preserve native Enter activation on Cancel.
+    if (event.key === 'Enter' && event.target?.closest?.('button')) return;
+    if (!['Escape', 'Enter', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.key)) return;
+    // Remapped browser accelerators own modified key combinations.
+    if (event.altKey || event.ctrlKey || event.metaKey) return;
+    const data = { type: 'keydown', key: event.key, repeat: event.repeat,
+      time: Math.round(performance.now()) };
+    input.trace.push(data);
+    if (input.trace.length > 80) input.trace.shift();
+    event.preventDefault();
+    if (input.handle) input.handle(data);
+    else input.pending.push(data);
+  }, true);
 })();

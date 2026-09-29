@@ -36,17 +36,3 @@ export function pruneSession(session, liveIds) {
   const previousIndex = ids.indexOf(selected);
   return { ...session, ids, index: previousIndex >= 0 ? previousIndex : Math.min(session.index, Math.max(0, ids.length - 1)) };
 }
-
-export function shortcutMatches(event, shortcut, mac = false) {
-  const parts = shortcut.toLowerCase()
-    .replaceAll('⌥', 'alt+').replaceAll('⇧', 'shift+')
-    .replaceAll('⌘', 'command+').replaceAll('⌃', 'macctrl+').split('+');
-  const key = parts.at(-1);
-  const eventKey = event.code?.startsWith('Key') ? event.code.slice(3).toLowerCase()
-    : event.code?.startsWith('Digit') ? event.code.slice(5) : event.key?.toLowerCase();
-  return key === eventKey &&
-    Boolean(event.altKey) === (parts.includes('alt') || parts.includes('option') || parts.includes('⌥')) &&
-    Boolean(event.shiftKey) === parts.includes('shift') &&
-    Boolean(event.metaKey) === (parts.includes('command') || parts.includes('cmd') || (mac && parts.includes('ctrl'))) &&
-    Boolean(event.ctrlKey) === (parts.includes('macctrl') || (!mac && parts.includes('ctrl')));
-}

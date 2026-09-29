@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { eligible, promote, commitOrder, reconstruct, step, pruneSession, shortcutMatches } from '../core.js';
+import { eligible, promote, commitOrder, reconstruct, step, pruneSession } from '../core.js';
 
 test('startup orders lastAccessed, then puts the focused active tab first', () => {
   assert.deepEqual(reconstruct([
@@ -39,13 +39,4 @@ test('incognito and Flytab UI are ineligible', () => {
 
 test('promoting an existing tab deduplicates visits', () => {
   assert.deepEqual(promote([2, 1, 3], 1), [1, 2, 3]);
-});
-
-test('shortcut matching uses physical F under Option and honors Shift', () => {
-  const event = { code: 'KeyF', key: 'ƒ', altKey: true, shiftKey: false, ctrlKey: false, metaKey: false };
-  assert.ok(shortcutMatches(event, 'Alt+F', true));
-  assert.ok(!shortcutMatches(event, 'Alt+Shift+F', true));
-  assert.ok(shortcutMatches({ ...event, shiftKey: true }, 'Alt+Shift+F', true));
-  assert.ok(shortcutMatches(event, '⌥F', true));
-  assert.ok(shortcutMatches({ ...event, shiftKey: true }, '⌥⇧F', true));
 });

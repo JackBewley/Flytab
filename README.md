@@ -1,40 +1,41 @@
 # Flytab
 
-A minimal Manifest V3 tab switcher. No build step or runtime dependencies. Chrome 121+ on desktop; macOS is the tested platform.
+Jump straight back to the Chrome tab you were just on, across windows. A minimal Manifest V3 extension with no build step or runtime dependencies. Chrome 121+ on desktop; macOS is the tested platform.
 
 ## Install
 
 1. Unzip the package if needed. Keep the **Flytab** folder somewhere permanent.
 2. Open `chrome://extensions`, enable **Developer mode**, choose **Load unpacked**, and select the folder containing `manifest.json`.
 3. Pin Flytab from Chrome's Extensions menu if you want the toolbar shortcut.
-4. Open `chrome://extensions/shortcuts`. Confirm **Open Flytab / next recent tab** is **Option+F** on macOS. If it is blank or conflicts with another shortcut, assign one. Keep its scope **In Chrome**.
+4. Open `chrome://extensions/shortcuts`. Confirm **Switch to previous tab** is **Option+F** and **Open recent tabs** is **Option+Shift+F** on macOS. If it is blank or conflicts with another shortcut, assign one. Keep its scope **In Chrome**.
 
-Changes to the source require **Reload** on Flytab's extension card. No store publication or installation in your normal Chrome profile was performed during development.
+After updating, click **Reload** on Flytab's extension card and confirm version **0.2.0**. Existing shortcut assignments are preserved; check the shortcuts page if you previously remapped them. No separate app is needed.
 
 ## Use
 
+**Tap Option+F to go straight to the previous tab. Tap it again to return.** It switches on command press with no popup, confirmation, or modifier-release wait. The toolbar icon does the same thing.
+
 | Action | Result |
 |---|---|
-| Click toolbar icon | Immediately activates the previous MRU tab; no switcher |
-| Option+F on macOS | Opens switcher with previous tab selected |
-| Repeat Option+F | Next older entry; wraps through all visited tabs |
-| Option+Shift+F | Previous entry while switcher is open; no action outside it |
-| Release Option, when received by popup | Commits selection |
-| Enter / click an entry | Commits selection reliably |
-| Esc / Cancel / close window | Cancels |
-| Arrow keys / wheel | Navigates without activating tabs |
+| Option+F / toolbar click | Immediately toggles between the two most recent tabs |
+| Option+Shift+F | Opens the optional recent-tabs list, selecting the previous tab |
+| Arrow keys / mouse wheel | Browses the list without activating tabs |
+| Enter / click an entry | Activates the selected tab and closes the list |
+| Esc / Cancel / close window | Cancels the list |
+| Release Option | No action; the optional list stays open |
+| Option+F while the list is open | Dismisses the list and toggles to the actual previous tab, ignoring the preview |
 
-The five-row list scrolls through the full MRU history. The starting tab appears last, labeled Current. A commit focuses the destination window, places the destination first, and puts the source second. Opening another window/app dismisses the switcher without committing.
+The five-row list scrolls through the full MRU history. The starting tab appears last, labeled Current. A commit focuses the destination window, places the destination first, and puts the source second. Opening another window/app dismisses the list without committing. Repeating Option+Shift+F keeps the existing selection.
 
-Other desktop platforms default to **Alt+Q / Alt+Shift+Q**, avoiding Chrome's Alt+F menu shortcut. Both commands are remappable. Alt/Option-based opening shortcuts support best-effort modifier release; other modifiers use Enter/click. The original Alt+F / Alt+Shift+F also navigate inside an already open switcher when they are not reserved accelerators. “Global MRU” means across Chrome windows, not a system-wide keyboard hook.
+Other desktop platforms default to **Alt+Q / Alt+Shift+Q**, avoiding Chrome's Alt+F menu shortcut. Both commands are remappable. “Global MRU” means across Chrome windows, not a system-wide keyboard hook. Holding F to repeat is no longer a way to browse older tabs; use the separate list when needed.
 
-## Important: fast taps
+## Why quick switching no longer opens a popup
 
-**Very fast Option+F taps cannot reliably commit automatically.** Chrome's Commands API reports invocation, not key release or current physical modifier state. A newly created popup can miss the release before it receives focus or installs its listener. This was reproduced with a quick macOS UI-automation chord: the switcher opened and its input trace was empty.
+The original prototype tried to commit when Option was released. Quick taps could release Option before Chrome created and focused the popup, leaving it waiting for Enter. This was reproduced in native UI automation and confirmed by physical-keyboard testing from the user.
 
-Flytab installs its release listener as the first synchronous script and buffers events while the UI loads. If it receives Option/Alt keyup, it commits. If it misses it, the popup **stays open for Enter or a click**. There is no timer that guesses whether you are still holding Option. Hold/release on a physical keyboard still needs testing on your Chrome/macOS combination; this is a working best-effort prototype, not a guarantee of Cmd+Tab semantics. See [TESTING.md](TESTING.md) for evidence and a quick manual matrix.
+Version 0.2.0 removes that timing dependency: the main shortcut directly activates the previous tab in the background worker. Quick native macOS shortcut taps passed with both a running worker and a stopped worker that Chrome had to wake. Chrome must still deliver the shortcut, and worker startup can add a brief delay; this is not a measured latency guarantee.
 
-The keyboard switcher is a separate, compact native popup window, so it has an OS title bar. This keeps toolbar-click behavior independent and avoids temporarily assigning an action popup.
+The optional list uses explicit Enter/click confirmation. There is no modifier-release guess, timeout, content-script overlay, or native helper. It is a compact Chrome popup window with an OS title bar. See [TESTING.md](TESTING.md) for evidence and manual checks.
 
 ## Privacy and permissions
 

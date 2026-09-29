@@ -1,5 +1,3 @@
-import { shortcutMatches } from './core.js';
-
 const token = new URL(location.href).searchParams.get('session');
 const list = document.querySelector('#tabs');
 const error = document.querySelector('#error');
@@ -10,7 +8,6 @@ let finished = false;
 let inputTail = Promise.resolve();
 let wheelTotal = 0;
 let wheelAt = 0;
-const mac = navigator.platform.toLowerCase().includes('mac');
 
 async function request(type, extra = {}) {
   const response = await chrome.runtime.sendMessage({ type: `flytab:${type}`, token, ...extra });
@@ -85,9 +82,7 @@ function render(snapshot) {
   document.querySelector('#empty').hidden = snapshot.items.length > 1;
   document.querySelector('#position').textContent = `${snapshot.items.length ? snapshot.index + 1 : 0} / ${snapshot.items.length}`;
   list.setAttribute('aria-busy', 'false');
-  hint.textContent = snapshot.altRelease
-    ? `Release ${mac ? 'Option' : 'Alt'} to switch · ↑ ↓ to browse`
-    : '↑ ↓ to browse · Enter to switch';
+  hint.textContent = '↑ ↓ to browse · Enter to switch';
 }
 
 async function commit(id) {
@@ -104,20 +99,9 @@ async function cancel(restore = true) {
 
 async function input(event) {
   if (event.key === 'Escape' && event.type === 'keydown') return await cancel();
-  if (event.type === 'keyup') {
-    if (current?.altRelease && (event.key === 'Alt' || event.code === 'AltLeft' || event.code === 'AltRight') && !event.altKey) {
-      return await commit();
-    }
-    return;
-  }
   if (event.key === 'Enter') return await commit();
-  // Registered accelerators are owned by chrome.commands, including repeats.
-  // Handling them here as well would advance twice on some Chrome builds.
-  if (Object.values(current?.shortcuts || {}).some(shortcut => shortcut && shortcutMatches(event, shortcut, mac))) return;
   if (['ArrowDown', 'ArrowRight'].includes(event.key)) return await request('move', { delta: 1 });
   if (['ArrowUp', 'ArrowLeft'].includes(event.key)) return await request('move', { delta: -1 });
-  // Physical KeyF works on macOS even when Option produces a non-Latin key value.
-  if (event.code === 'KeyF' && event.altKey) return await request('move', { delta: event.shiftKey ? -1 : 1 });
 }
 
 chrome.runtime.onMessage.addListener(message => {

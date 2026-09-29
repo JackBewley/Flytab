@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Flytab",
-  "version": "0.1.0",
-  "description": "Switch between recently used tabs across Chrome windows.",
+  "version": "0.2.0",
+  "description": "Jump straight back to your previous Chrome tab, across windows.",
   "minimum_chrome_version": "121",
   "incognito": "not_allowed",
   "permissions": ["tabs", "storage", "favicon"],
@@ -11,11 +11,11 @@
   "commands": {
     "switch-next": {
       "suggested_key": { "default": "Alt+Q", "mac": "Alt+F" },
-      "description": "Open Flytab / next recent tab"
+      "description": "Switch to previous tab"
     },
     "switch-previous": {
       "suggested_key": { "default": "Alt+Shift+Q", "mac": "Alt+Shift+F" },
-      "description": "Previous entry while Flytab is open"
+      "description": "Open recent tabs"
     }
   },
   "content_security_policy": {

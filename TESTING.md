@@ -1,6 +1,6 @@
 # Flytab verification
 
-Icon refinement **0.3.2**: replaced the square with a 20×16 horizontal tab-window frame, a minimal tab strip, and an internal left arrow. The whole mark uses a lighter 1.4-unit stroke and warm neutral gray (#767574) sampled from the supplied reference. PNG dimensions/transparency were verified at all four sizes, and light/dark size previews are in `test-evidence/0.3.2/`. Loaded v0.3.2 in an isolated Chrome 151 profile, pinned its icon, compared it visually with the browser navigation controls, and opened the switcher to verify the matching header. This was an asset/UI smoke check; the full behavior suite was not repeated for this artwork-only edit. The latest full browser run passed all 28 checks in v0.3.1; the behavior and native-keyboard evidence below remains the unchanged v0.3.0 baseline.
+Icon refinement **0.3.3**: enlarged the frame to 22×19 on a 24-unit canvas, increased the stroke to 1.8 units, and darkened it to #444746. The shallower tab strip and 6-unit arrowhead leave more clear space around the arrow. All four PNG dimensions/transparency were checked; a before/after size comparison is saved in `test-evidence/0.3.3/`. Loaded v0.3.3 in isolated Chrome 151, pinned its icon, inspected it alongside the navigation controls, and opened the switcher to check the matching header. These were asset/UI smoke checks; the full behavior suite was not repeated for this artwork-only edit. The latest full browser run passed all 28 checks in v0.3.1; the behavior and native-keyboard evidence below remains the unchanged v0.3.0 baseline.
 
 Version **0.3.0**, tested September 29, 2026 on macOS with isolated **Google Chrome for Testing 151.0.7922.34** profiles. Tests do not modify the user's ordinary Chrome profile.
 
@@ -52,7 +52,7 @@ Use Chrome for Testing or Chromium, which accept automated unpacked-extension lo
 
 ## Manual check
 
-1. Reload Flytab and verify version 0.3.2. Confirm Option+F is **Switch to previous tab** and Option+Shift+F is **Open recent tabs** in `chrome://extensions/shortcuts`.
+1. Reload Flytab and verify version 0.3.3. Confirm Option+F is **Switch to previous tab** and Option+Shift+F is **Open recent tabs** in `chrome://extensions/shortcuts`.
 2. Visit tabs in two windows, then quickly tap Option+F several times. Your two most recent tabs should alternate immediately without a popup. Repeat after the extension has been idle.
 3. Hold Option+Shift and tap F. Once the list is visible, keep BOTH modifiers held and tap F several more times. Every tap must move forward; releasing F between taps must leave the list open. Keep cycling to check wrapping.
 4. Release Shift while keeping Option held: it should stay open. Release Option: the highlighted tab should activate and the list close. Repeat with Option released first, then Shift. Test left/right Option and Shift keys.

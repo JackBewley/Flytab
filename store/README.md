@@ -1,6 +1,6 @@
 # Flytab Chrome Web Store images
 
-Prepared September 30, 2026 from Flytab 0.6.5 on macOS, Chrome for Testing 153.0.8010.12. Not uploaded by this task.
+Prepared September 30, 2026 from Flytab 0.6.5 on macOS, Chrome for Testing 153.0.8010.12. These assets accompany the 0.6.5 listing.
 
 ## Upload order
 

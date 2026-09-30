@@ -8,7 +8,7 @@ web
 
 ## Users and purpose
 
-Desktop Chrome users who want a very quick return to their previous tab across browser windows. The primary action is an immediate MRU toggle: macOS Option+F when the list is closed and the toolbar button switch directly, without opening a popup or waiting for modifier release. Option+Shift+F opens an optional compact five-row list. Pinned Flytab uses a toolbar popup on supported Chrome; unpinned/unsupported cases use the separate native window. Flytab is a minimal Manifest V3 extension with on-device processing; the user explicitly rejects a separate helper app.
+Desktop Chrome users who want a very quick return to their previous tab across browser windows. The primary action is an immediate MRU toggle: macOS Option+F when the list is closed and the toolbar button switch directly, without opening a popup or waiting for modifier release. Option+Shift+F opens an optional compact five-row list. Pinned Flytab uses a toolbar popup on supported Chrome; unpinned/unsupported cases use the separate native window. Flytab is a minimal Manifest V3 extension with on-device processing; no separate helper app is required or supported.
 
 ## Capabilities and constraints
 
@@ -26,10 +26,10 @@ Flytab uses a left arrow inside a horizontal tab-window outline, with a substant
 
 ## Stack
 
-Plain JavaScript modules, HTML and CSS. No runtime dependencies or build step; chosen for the requested minimal extension.
+Plain JavaScript modules, HTML and CSS. No runtime dependencies or build step; chosen to keep the extension minimal.
 
 ## Evidence
 
-The user's requirements in this task are authoritative. Browser verification and limitations are recorded in TESTING.md.
+Browser verification and limitations are recorded in TESTING.md.
 
-Settings is available through the toolbar context menu’s Options entry. It displays Chrome’s assigned shortcuts and opens Chrome’s editor; it adds no alternate key-binding system. The toolbar icon refreshes to a clean light or dark variant when the switcher or settings opens, or when settings is revisited. It keeps that appearance between openings, with no hidden document or background polling. The outlined icon was rejected. Appearance checks stay separate from switching; custom Chrome themes may not match the device preference.
+Settings is available through the toolbar context menu’s Options entry. It displays Chrome’s assigned shortcuts and opens Chrome’s editor; it adds no alternate key-binding system. The toolbar icon refreshes to a clean light or dark variant when the switcher or settings opens, or when settings is revisited. It keeps that appearance between openings, with no hidden document or background polling. Icons use clean strokes without a contrasting outline. Appearance checks stay separate from switching; custom Chrome themes may not match the device preference.

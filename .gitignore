@@ -17,12 +17,16 @@ node_modules/
 /browser-profile/
 /live-profile/
 
-# Generated design-tool artifacts; retain .impeccable/design.json.
-/.impeccable/review/
-/.impeccable/mocks/
-/.impeccable/build/
-/.impeccable/cache/
-/.impeccable/config.local.json
+# Local assistant/tool state and internal publishing notes.
+# Keep portable AGENTS.md and public product/design documentation tracked.
+/.codex/
+/.agents/
+/.claude/
+/.chatgpt/
+/.impeccable/
+/AGENTS.local.md
+/CLAUDE.local.md
+/CHROMEWEBSTORE.md
 /premium-audit.json
 
 # Local configuration and private extension-signing credentials.

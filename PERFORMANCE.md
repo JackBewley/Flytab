@@ -2,6 +2,29 @@
 
 The goal is to make the switcher receive keyboard input sooner while keeping the immediate Option+F toggle, frozen preview order, release-to-select behavior, and existing permissions. A release that occurs before Chrome focuses the extension document is still unrecoverable.
 
+## Total-memory baseline and appearance-setting design (not applied)
+
+After asking about optional automatic icons and refresh-on-open, the user asked for Flytab's memory without the appearance watcher. A new measurement compares three fresh isolated headless Chrome 153 profiles, each with the same eight visited blank tabs: no extension; current Flytab with only the two appearance-document startup calls disabled in a temporary copy; and current Flytab with automatic appearance. The no-auto copy retains the permission, bundled files and dormant appearance functions, modeling a disabled setting rather than deleting the feature. No production runtime/settings were changed.
+
+Each profile is sampled with a warm worker and no popup, then after an explicit worker stop and twelve seconds of settling. Explicit stopping avoids the inspection tool keeping a worker alive; it measures the sleeping state, not natural timeout timing. Sum of macOS `vmmap -summary` physical footprints across that browser's processes, MiB:
+
+| Run order | No extension warm / idle | Flytab without auto warm / idle | Flytab with auto warm / idle |
+|---|---:|---:|---:|
+| None → no auto → auto | 494.4 / 481.1 | 521.2 / 479.1 | 528.6 / 504.6 |
+| Auto → no auto → none | 493.9 / 481.5 | 522.4 / 480.3 | 528.2 / 504.7 |
+
+**Without automatic icons:** warm Flytab increased total footprint by 26.8/28.5 MiB over plain Chrome. Its observed worker JavaScript used heap in the first run was about 0.71 MiB; most of the process footprint is Chrome's renderer infrastructure. No popup was open. After the worker stopped, its renderer disappeared and process count matched plain Chrome (14 in this fixture). The whole-browser idle differences were -2.0/-1.2 MiB, demonstrating browser allocation variation rather than negative-cost Flytab. The browser-process component itself was +1.5/+1.1 MiB. A precise positive total idle cost is therefore below this measurement's resolution; do not claim zero memory or turn the browser-only component into an exact overall cost. The eight-entry session state used 448 bytes of storage accounting; the prior 121-entry fixture used about 4 KiB.
+
+**Automatic-icon cost:** the hidden document kept one extra renderer (15 total processes) after the worker stopped. Auto minus no-auto idle footprint was 25.5/24.4 MiB. This is consistent in scale with the earlier 22–23 MiB measurements under a different one-tab workload; treat the cost as roughly 20–30 MiB, not a universal exact constant. Warm auto exceeded warm no-auto by 7.4/5.8 MiB in this fixture because the worker already needed a renderer. Do not add the idle watcher penalty on top of warm-worker usage as though they were independent fixed costs.
+
+**Proposed settings:** support refreshing appearance when the switcher/settings opens (recommended for low idle cost), continuous background updates (opt-in), and optionally fixed light/dark icons. A disabled continuous setting must prevent creation and call [offscreen.closeDocument](https://developer.chrome.com/docs/extensions/reference/api/offscreen#method-closeDocument) for an existing watcher, including resolving pending creation safely. Stopping only its timer leaves the document resident. The setting and bundled icon variants themselves are tiny; the running document causes the material footprint.
+
+Refresh-on-open can use the popup/settings document already being created. A media query and an icon-update message add small transient work, with no new permanent document or polling timer. It should therefore have essentially the same idle footprint as manual appearance, although the implementation and its incremental allocation/timing have not been measured. Defer cosmetics until input/list readiness and keep them out of the MRU queue. A source-page-free Option+F/toolbar toggle opens no extension UI, so it cannot itself read the media query this way; the icon can stay stale until the picker or settings is opened.
+
+Without a resident appearance document, Chrome can reclaim the extension renderer after its worker becomes dormant and all visible extension pages close. [Chrome normally stops workers after about 30 seconds without events/API activity](https://developer.chrome.com/docs/extensions/develop/concepts/service-workers/lifecycle#idle-and-shutdown); tab activity that Flytab tracks can keep waking it. These are idle savings, not a promise of reclaiming the same amount throughout active browsing. The pending appearance-setting design does not require additional waits in quick-toggle handlers.
+
+Evidence: `test-evidence/memory-baseline/{none,noauto,auto}-{1,2}.json`; reproducible isolated script/source copies in ignored `work/memory-baseline/`. Browser metadata and profile/process variation are included; renderer residency was confirmed from process counts and targets. No user's browser profile or settings was changed.
+
 ## Options study: manual icon and a 20-entry history (not applied)
 
 The user asked to compare options after v0.6.4. Shipping runtime remains commit `2c840b4`; no history limit or icon change was applied. Isolated copies under `work/options-study/` compare normal history with a prototype that caps promotion, commit, reconstruction and reconciliation at 20 entries, including the current tab. Both retain automatic icons. Ordinary tabs remain open. Full live-tab queries still reconcile history; this is a bounded-history prototype, not a rewrite of tab lookup or popup rendering.

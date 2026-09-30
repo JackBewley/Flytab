@@ -1,0 +1,147 @@
+# Chrome Web Store Listing — Flytab
+
+Last updated: 2026-09-29. Planning draft based on v0.6.5, commit 0db1d3d. No dashboard item, account registration, upload or submission has been performed for this plan. Owner choices below remain undecided; recommendations are not approvals.
+
+## Readiness and release plan
+
+Flytab is a working Manifest V3 extension with no runtime dependencies, external connections, analytics or account. The last focused release passed 111 checks; see TESTING.md. A final submission pass still needs to cover the chosen browser/OS support policy, physical shortcut use, first installation, restart/update behavior, permission wording and an appropriate large-history performance check. The manifest targets Chrome 121, but that version could not be verified on this Mac. Current evidence is primarily macOS Chrome 151/153; Windows/Linux release claims need their own validation.
+
+1. Choose the publishing identity/account, support contact, policy hosting, price, supported platforms and launch visibility.
+2. Prepare listing copy, a store icon, promotional tile, screenshots, a public privacy policy and reviewer instructions.
+3. Finish the release checks and decide whether to label the public release 1.0.0. That version number is a recommendation, not a store requirement.
+4. Add a dedicated store packaging target and validate it. The existing ZIP has a Flytab/ wrapper; the store requires manifest.json at the ZIP root. Exclude development materials and internal README/TESTING/PERFORMANCE/store-planning documentation from the store artifact. Preserve the current user-download bundle as a separate output if useful.
+5. Register/configure the chosen developer account: one-time registration fee, two-step verification, publisher name, verified contact email and any required identity/trader details in the current dashboard. The account's status has not been checked.
+6. Upload the store ZIP, complete listing/privacy/distribution/test fields and submit for review. Recommendation: unlisted pilot, then public visibility on the same listing. All visibility modes require review; only Public provides normal store discovery. Deferred publishing can separate approval from launch.
+
+Google says most reviews take a few days, but some take a few weeks. Account verification or a requested correction can add time. Approval and store ranking are not guaranteed.
+
+## Decisions outstanding
+
+| Decision | Recommendation / remaining input |
+|---|---|
+| Publishing identity and owning Google account | User to choose personal or Creative Method ownership, exact publisher name and account. |
+| Name and positioning | Keep Flytab; describe its purpose clearly as returning to the previous tab across windows. Review final listing wording before upload. |
+| Price | Recommend free for the initial release. No payment/licensing flow exists. |
+| Platform support | Recommend macOS-focused launch with explicit tested support; validate Windows/Linux before making broader claims. Resolve the minimum-Chrome compatibility claim. |
+| Visibility | Recommend a short unlisted pilot followed by Public, which is needed for search/discovery. |
+| Contact and policy hosting | User to provide a monitored public support email and choose a stable public policy URL, e.g. a page on the publisher's website. A compact support/privacy page is sufficient. |
+| Regions and primary language | English is implemented. Recommend broad distribution after completing applicable account/trader declarations. Region selection remains unconfirmed. |
+
+Open-source licensing is a separate, optional decision; it is not necessary to publish the existing extension.
+
+## Store Listing
+
+Extension name: Flytab (matches current manifest).
+
+Short description: Jump straight back to your previous Chrome tab, across windows.
+
+Single purpose: Switch between recently used open Chrome tabs across browser windows.
+
+Primary language: English.
+
+Category: Choose the closest current productivity/workflow category in the live dashboard; older templates use category names that may differ.
+
+Detailed description — draft, pending support details and final platform scope:
+
+Flytab takes you straight back to the Chrome tab you were just using, even when it is in another window.
+
+On Mac, tap Option+F to switch to your previous tab. Tap it again to return. Clicking the Flytab toolbar icon does the same thing.
+
+For an older tab, hold Option+Shift and press F to open a compact list of recent tabs. Keep both modifiers held and tap F to move through the list, then release both to switch. Tab names and icons make the destination easy to recognize. Escape cancels; clicking an entry or pressing Enter also selects it. The current tab appears first and the previous tab starts selected.
+
+Pin Flytab in Chrome's Extensions menu for convenient access. You can change both shortcuts through Flytab's Options page and Chrome's shortcut settings. If a shortcut is already in use, assign an available one there.
+
+Your recent-tab order stays on your device. Flytab has no analytics, account or server and does not send your tab information elsewhere. It uses information about currently open tabs to show the switcher; it does not access Chrome's saved browsing history or read webpage contents. Chrome may describe its required tabs permission as reading browsing history.
+
+The visual shortcut is designed to be held while choosing. If you release it before Chrome focuses the list, Enter or a click selects the highlighted entry. Use Option+F for an immediate previous-tab tap. Incognito tabs are excluded. The toolbar icon refreshes its light/dark appearance when the list or settings opens.
+
+Support contact: pending owner-provided address/URL; insert before submission.
+
+## Graphics & Assets
+
+| Asset | Dimensions | Status | File / plan |
+|---|---|---|---|
+| Store icon | 128×128 PNG | Existing PNG; store presentation needs review | icons/icon-128.png; preserve the approved mark, assess store padding and contrast independently of the toolbar sizes. |
+| Screenshot 1 | Plan 1280×800 | Not prepared for store | Show the actual pinned switcher in Chrome with safe demonstration tab titles; explain previous-tab selection. |
+| Screenshot 2 | Plan 1280×800 | Not prepared for store | Show cross-window switching and the quick-toggle shortcut. |
+| Screenshot 3 | Plan 1280×800 | Optional | Show dark appearance or shortcut settings. |
+| Small promotional tile | 440×280 | Required; not created | Flytab mark and restrained product branding. |
+| Marquee promotional tile | 1400×560 | Optional; not created | Not required for initial submission. |
+
+Current Google guidance requires an icon, at least one screenshot and the small promotional tile. The skill's older template labels the small tile optional; use the current official requirement. Existing test captures establish UI evidence but are not finished listing assets. Store assets must show the shipped UI and contain no private browsing data. Avoid unsupported superlatives and claims of Google affiliation.
+
+## Permissions Justification
+
+| Permission | Type | Justification |
+|---|---|---|
+| tabs | permissions | Show the names of currently open tabs in the recent-tab switcher, identify destinations across windows, and keep recent-tab order in step with tab activation/closure. Flytab does not use Chrome's History API or access webpage contents. |
+| storage | permissions | Keep recent-tab IDs, their order and the current switcher's selection in temporary session storage so switching survives background-worker suspension. Also retain temporary session identity and a recoverable toolbar-error flag. |
+| favicon | permissions | Display each tab's recognizable icon from Chrome's local favicon cache, without downloading icons from websites. |
+
+No host permissions or content scripts. No offscreen permission. No remote code: every executable file is bundled. Commands, action and windows APIs add no separate permission entries.
+
+## Privacy & Data Use
+
+Technical facts verified from the current source; final dashboard classifications must be matched to the live form's definitions before submission.
+
+| Information | Local handling | Off-device transmission / sharing |
+|---|---|---|
+| Open-tab titles, URLs and associated icon information | Read live to label/filter tabs and request local cached favicons; not persisted by Flytab. | None by the extension. |
+| Tab activation and last-access timing | Used to maintain/reconstruct recent-tab order. | None. |
+| Tab/window IDs, recent order, active picker/session identity and toolbar-error flag | Temporary chrome.storage.session state; includes frozen picker IDs/selection and source/window information. | None; no storage.sync. |
+| Webpage contents, cookies, passwords and saved Chrome browsing history | Not read. Open-tab metadata can itself contain sensitive text; explain the actual metadata access without claiming no data is used. | None. |
+| Analytics, advertising identifiers, remote crash reports and account details | Not collected by the extension. | None. |
+
+Session state is cleared on browser exit or extension reload/disable/removal; worker suspension alone does not clear it. Local processing is still user-data handling for the privacy policy. Do not copy a generic policy saying no browsing information is ever accessed or stored.
+
+Data-use certifications supported by the current code: no sale to third parties; no use beyond tab switching; no use for creditworthiness/lending. Complete the dashboard's actual attestations only during the authorized submission process.
+
+## Privacy Policy
+
+Public URL: pending hosting decision.
+
+Policy work remaining: identify the publisher/contact, explain local metadata and temporary recent-tab order, retention/deletion, absence of transmission/sale/analytics, and how future policy changes will be communicated. Keep the policy and dashboard disclosures consistent. If a future support website has separate analytics or collects support messages, describe that separately from the extension's behavior.
+
+## Distribution
+
+Visibility: undecided; recommended Unlisted pilot → Public.
+Regions: undecided; recommended broad distribution subject to accurate required account declarations.
+Pricing: undecided; recommended Free initially.
+Store ID and listing URL: not created/known.
+
+## Developer Info
+
+Publisher name: pending.
+Owning developer Google account: pending.
+Verified public contact email: pending.
+Support URL/email: pending.
+Homepage/policy hosting: pending.
+Developer registration and two-step verification: not checked.
+Required identity/trader declarations: not checked; answer according to the publisher's actual circumstances.
+
+## Version History
+
+| Version | Date | Changes | Store status |
+|---|---|---|---|
+| 0.6.5 | 2026-09-29 | Refresh icon when visible UI opens; remove continuous appearance watcher. | Local development release; not submitted by this task. |
+
+## Review Notes
+
+Testing instructions to include: open at least three ordinary tabs across two Chrome windows and visit each; pin Flytab; confirm/assign shortcuts; use Option+F twice to toggle; hold Option+Shift+F, repeat F, release both to commit across windows; test Escape and a row click. Settings opens from the toolbar context menu. No credentials, account or helper app is required. Review the unpinned fallback as well.
+
+Known limitations: macOS-first evidence; Chrome 121 compatibility unverified; extremely fast full release before focus cannot be recovered; unpinned/unsupported action popups use a separate window; toolbar appearance may be stale between openings; custom browser themes can differ from system light/dark preference; incognito excluded. Switching support is within Chrome, not a system-wide hotkey.
+
+Rejection history: none known; no submission performed.
+
+## Official references checked
+
+- [Register](https://developer.chrome.com/docs/webstore/register)
+- [Account setup](https://developer.chrome.com/docs/webstore/set-up-account)
+- [Two-step verification](https://developer.chrome.com/blog/policy-update-2sv)
+- [Prepare the ZIP](https://developer.chrome.com/docs/webstore/prepare)
+- [Images](https://developer.chrome.com/docs/webstore/images)
+- [Privacy policy requirement](https://developer.chrome.com/docs/webstore/program-policies/privacy)
+- [Privacy fields](https://developer.chrome.com/docs/webstore/cws-dashboard-privacy)
+- [Distribution](https://developer.chrome.com/docs/webstore/cws-dashboard-distribution)
+- [Submission and deferred publishing](https://developer.chrome.com/docs/webstore/publish)
+- [Review timing](https://developer.chrome.com/docs/webstore/review-process)

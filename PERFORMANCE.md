@@ -2,6 +2,29 @@
 
 The goal is to make the switcher receive keyboard input sooner while keeping the immediate Option+F toggle, frozen preview order, release-to-select behavior, and existing permissions. A release that occurs before Chrome focuses the extension document is still unrecoverable.
 
+## Options study: manual icon and a 20-entry history (not applied)
+
+The user asked to compare options after v0.6.4. Shipping runtime remains commit `2c840b4`; no history limit or icon change was applied. Isolated copies under `work/options-study/` compare normal history with a prototype that caps promotion, commit, reconstruction and reconciliation at 20 entries, including the current tab. Both retain automatic icons. Ordinary tabs remain open. Full live-tab queries still reconcile history; this is a bounded-history prototype, not a rewrite of tab lookup or popup rendering.
+
+**Manual icon:** the prior paired physical-footprint measurements estimate about **22–23 MiB saved while idle** by removing the offscreen appearance document. A manual Light/Dark setting could retain clean icons without a resident appearance watcher. No switching speed gain is established from removing the watcher; an absent renderer may need to be recreated for a cold popup. The existing native pre-theme comparison is documented below. This option was not remeasured in this study.
+
+**20 entries, with 120 visited tabs open:** two opposite-order native pairs on Chrome for Testing 153.0.8010.12 total 80 measured openings, 160 quick toggles and 400 navigation steps. The normal list contains 121 eligible entries (the 120 fixtures plus the initial browser tab); the capped list contains 20. A separate controller tab belongs to the extension and is excluded from MRU. Medians in milliseconds:
+
+| Worker | Normal → capped opening | Normal → capped quick toggle | Normal → capped navigation |
+|---|---:|---:|---:|
+| Warm | 41.3 → 40.4 | 6.5 → 6.6 | 1.8 → 1.7 |
+| Restarted | 43.7 → 39.9 | 8.2 → 8.5 | 1.8 → 1.7 |
+
+Opening improved about 0.9–3.8 ms in these fixtures; quick toggling is essentially unchanged, with small increases in this run. Warm-opening p95 changed from 44.8 to 47.3 ms, so the cap is not a universal speed win. These are real native document-focus/readiness timings with automated commands and DOM navigation, excluding physical shortcut delivery and page paint. The current healthy quick toggle already reads only source/destination metadata, which limits the benefit from shortening the ID list.
+
+**Memory:** separate headless, fresh-profile popup inspections after explicit garbage collection measured Chrome DevTools `Runtime.getHeapUsage` and `Memory.getDOMCounters`. Opposite-order pairs reduced reported JavaScript used heap by 24,716/86,804 bytes and embedder used heap by 1,364,248/1,736,120 bytes: approximately **1.3–1.7 MiB combined popup-isolate heap**. Nodes fell from 1,158 to 249. These are heap measurements, not whole-browser physical footprint or a guaranteed RAM reduction; title/icon content and allocator behavior vary. They apply while the popup is open. Appearance-document costs remain unchanged.
+
+After closing the popup, `storage.session.getBytesInUse('flytab')` reported 4,064 bytes for normal history and 832 for the cap, a **3,232-byte (3.16 KiB) reduction** in Chrome's storage accounting. With the popup open, history plus frozen session used 8,608 versus 2,144 bytes. [Chrome documents getBytesInUse as storage quota accounting](https://developer.chrome.com/docs/extensions/reference/api/storage#method-StorageArea-getBytesInUse); these values are not a whole-process RAM measurement. Limiting Flytab's list does not unload or close webpage tabs.
+
+The tradeoff is that older entries disappear from Flytab until revisited. A manual icon is the substantial idle-memory option; a 20-entry cap is mainly a product preference for a shorter recent list, with modest measured popup savings. A possible alternative is refreshing icon appearance only when a visible Flytab popup/settings page opens; it can avoid a resident watcher but leave the toolbar icon stale between openings. That alternative is a design option, not measured or implemented here.
+
+Raw evidence: `test-evidence/options-study/{base,cap}-{1,2}.json` for native speed and `memory-{base,cap}-{1,2}.json` for heap/storage. The prototype and adapted benchmark are in ignored `work/options-study/`. Memory runs are excluded from speed results. No 1,000-tab test or user's browser profile was used.
+
 ## v0.6.4 lower-allocation quick switching
 
 Healthy Option+F and toolbar toggles now query only the current active tab and the previous MRU destination. They reuse the validated destination, avoid building a populated window containing every tab, and avoid copying the MRU array merely to promote an already-current source. Missing history, a stale/ineligible destination, or an open picker retains the full reconciliation path. Browser events still remove closed tabs. Source/destination validation, activation-before-window-focus, durable MRU writes, and popup input ownership remain intact. No new persistent cache, timer, dependency, or permission was added.

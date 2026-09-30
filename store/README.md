@@ -20,3 +20,7 @@ The generator `scripts/store-assets.mjs` loads a temporary extension copy in an 
 Recreate with `node scripts/store-assets.mjs`; the existing project Playwright Core development dependency and installed Chrome for Testing are required. Set CHROME_PATH if needed. The script starts only temporary browsers and closes them after capture. Review images after any user-facing UI change, then rerun packaging/delivery validation. Browser focus and demonstration favicon caching can affect generation; do not run alongside other native-browser tests.
 
 These are static listing assets. No store files, capture hooks or artwork generator are included in the extension's runtime-only package.
+
+## GitHub social preview
+
+`assets/social-1280x640.png` is the repository sharing image, using the same mark and colors as the store artwork. Regenerate with `python3 scripts/social-preview.py` (Pillow and Arial fonts required; use FONT_DIR on other platforms). Upload under repository Settings → General → Social preview. It is excluded from extension packages.

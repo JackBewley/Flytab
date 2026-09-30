@@ -32,4 +32,4 @@ Plain JavaScript modules, HTML and CSS. No runtime dependencies or build step; c
 
 The user's requirements in this task are authoritative. Browser verification and limitations are recorded in TESTING.md.
 
-Settings is available through the toolbar context menu’s Options entry. It displays Chrome’s assigned shortcuts and opens Chrome’s editor; it adds no alternate key-binding system. The toolbar icon uses a static light keyline around the dark geometry for both toolbar themes, as requested, with no background theme detection.
+Settings is available through the toolbar context menu’s Options entry. It displays Chrome’s assigned shortcuts and opens Chrome’s editor; it adds no alternate key-binding system. The toolbar icon automatically uses a clean light or dark variant based on the device appearance. The outlined icon was rejected. Appearance checks stay separate from switching; custom Chrome themes may not match the device preference.

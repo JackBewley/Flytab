@@ -8,7 +8,7 @@ root = Path(__file__).resolve().parents[1]
 svg = ET.parse(root / 'icons/icon.svg').getroot()
 view_size = float(svg.attrib['viewBox'].split()[2])
 
-for size in (16, 32, 48, 128):
+for size, dark in [(size, dark) for dark in (False, True) for size in (16, 32, 48, 128)]:
     scale = size * 12 / view_size
     canvas = Image.new('RGBA', (size * 12, size * 12))
     draw = ImageDraw.Draw(canvas)
@@ -20,7 +20,7 @@ for size in (16, 32, 48, 128):
             for child in element:
                 render(child, attrs)
             return
-        color = attrs['stroke']
+        color = '#e8eaed' if dark else attrs['stroke']
         stroke = float(attrs['stroke-width'])
         width = round(stroke * scale)
         if tag == 'rect':
@@ -42,5 +42,6 @@ for size in (16, 32, 48, 128):
             raise ValueError(f'Unsupported icon geometry: {tag}')
 
     render(svg, {})
-    canvas.resize((size, size), Image.Resampling.LANCZOS).save(root / f'icons/icon-{size}.png')
-print('Rendered 16, 32, 48 and 128px icons.')
+    suffix = '-dark' if dark else ''
+    canvas.resize((size, size), Image.Resampling.LANCZOS).save(root / f'icons/icon{suffix}-{size}.png')
+print('Rendered light-toolbar and dark-toolbar icons at 16, 32, 48 and 128px.')

@@ -8,7 +8,7 @@ const root=resolve(import.meta.dirname,'..');
 const scratch=await mkdtemp(join(tmpdir(),'flytab-options-'));
 const extension=join(scratch,'extension');
 await mkdir(extension);
-for(const name of ['manifest.json','background.js','core.js','early-input.js','popup.html','popup.js','popup.css','tab.svg','options.html','options.css','options.js','icons'])await cp(join(root,name),join(extension,name),{recursive:true});
+for(const name of ['manifest.json','background.js','core.js','early-input.js','popup.html','popup.js','popup.css','tab.svg','options.html','options.css','options.js','theme.html','theme.js','icons'])await cp(join(root,name),join(extension,name),{recursive:true});
 const context=await chromium.launchPersistentContext(join(scratch,'profile'),{headless:true,executablePath:process.env.CHROME_PATH||chromium.executablePath(),args:[`--disable-extensions-except=${extension}`,`--load-extension=${extension}`]});
 const evidence=resolve(process.env.FLYTAB_EVIDENCE||join(root,'test-evidence/0.6.2'));
 const results=[];const pass=name=>{results.push(name);console.log('PASS',name);};

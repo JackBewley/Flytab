@@ -16,6 +16,9 @@ for (const name of ['manifest.json', 'background.js', 'core.js', 'early-input.js
   await cp(join(source, name), join(extension, name));
 }
 await cp(join(source, 'icons'), join(extension, 'icons'), { recursive: true });
+for (const name of ['options.html','options.css','options.js','theme.html','theme.js']) {
+  try { await cp(join(source,name),join(extension,name)); } catch (error) { if(error.code !== 'ENOENT') throw error; }
+}
 const manifest = JSON.parse(await readFile(join(extension, 'manifest.json'), 'utf8'));
 const publicKey = generateKeyPairSync('rsa', { modulusLength: 2048 }).publicKey.export({ type: 'spki', format: 'der' });
 manifest.key = publicKey.toString('base64');

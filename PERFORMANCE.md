@@ -2,6 +2,27 @@
 
 The goal is to make the switcher receive keyboard input sooner while keeping the immediate Option+F toggle, frozen preview order, release-to-select behavior, and existing permissions. A release that occurs before Chrome focuses the extension document is still unrecoverable.
 
+## v0.6.3 automatic icon: speed and memory
+
+The user authorized an offscreen appearance document and rejected the outlined icon. The clean dark/light PNGs preserve the prior geometry. The document starts at install/update and browser startup; command handlers never create it or wait for it. Icon messages use a separate cosmetic queue. Chrome 153 did not deliver emulated media-query change events in the hidden document, although `.matches` updated correctly. A local five-second fallback reads that boolean and sends a message only after a change or failed application. There is no persistent Port, network traffic, DOM rendering loop, or worker keepalive. Chrome may delay background timers, so this is not an exact five-second update guarantee. Custom toolbar themes may differ from the device preference.
+
+**Memory:** two opposite-order fresh-profile comparisons on macOS/Chrome for Testing 153.0.8010.12 measured combined process physical footprint with `vmmap -summary`, after explicitly stopping the worker and waiting through multiple polling intervals. Baseline/new totals were 280.9/303.6 MiB and 280.2/302.5 MiB: **22.7 and 22.3 MiB additional footprint**. The extra renderer itself was about 27 MiB; changes in other browser processes affect the net difference. The document’s measured JS heap was about 0.5 MiB. Combined process RSS increased by roughly 115–134 MiB in those pairs, but includes shared mapped memory; do not label that number as private memory. These are bounded local idle measurements, not a guarantee on every machine or profile.
+
+**Speed:** two alternating before/after pairs compare frozen v0.6.2 commit `23865f3` with v0.6.3. The Mac was locked, preventing native foreground Chrome from recording fixture visits; unsuccessful headed attempts are excluded. The completed tests use full **headless Chrome 153**, real extension APIs, a pinned action surface, 8/120 visited blank fixtures, and warm/restarted workers. Across both versions: **160 measured openings, 320 toggles, 800 navigation steps**. These measurements exclude physical shortcut/OS focus delay and compositor paint, and must not be compared directly to the historical headed timings.
+
+Median milliseconds (v0.6.2 → v0.6.3):
+
+| Fixtures / worker | Popup fully ready | Immediate toggle | Navigate one entry |
+|---|---:|---:|---:|
+| 8 / warm | 28.2 → 26.9 | 3.7 → 3.0 | 0.7 → 0.7 |
+| 8 / worker-restarted | 29.9 → 28.0 | 6.3 → 4.8 | 0.7 → 0.7 |
+| 120 / warm | 35.3 → 33.0 | 7.4 → 6.9 | 1.6 → 1.5 |
+| 120 / worker-restarted | 35.9 → 33.9 | 11.4 → 9.0 | 1.7 → 1.7 |
+
+No slowdown was observed in this controlled comparison. A resident extension renderer may help opening/wake time, but the test does not establish that as the cause or promise a speed improvement. Native foreground timing remains unverified for this revision because the Mac was locked. Earlier permission and no-helper constraints remain except for the explicitly approved offscreen permission.
+
+Evidence: `test-evidence/0.6.3/theme-{before,after}-{2,3}.json`, `headless-speed-{1,2}-{before,after}.json`, and `speed-comparison.json`. The theme suite verifies one-document reuse, actual emulated media changes and real icon updates, worker stop survival, update after a later worker wake, and no worker wake over unchanged polling intervals. Poll deduplication and failed-application retry have separate unit checks. Run `npm run test:theme` for lifecycle/memory evidence (macOS process metrics require ps/vmmap). Use `FLYTAB_HEADLESS=1` only for explicitly headless startup benchmarks.
+
 ## v0.6.0 audit remediation and speed checks
 
 The runtime stays dependency-free. Error recovery adds no normal-path API roundtrip or awaited cosmetic update. Home/End uses the existing move message; early input capture, serialized preview/commit, and immediate toggling remain intact. Normal rows are still 52px, with growth for enlarged text. Development tests and packaging are excluded from the runtime.

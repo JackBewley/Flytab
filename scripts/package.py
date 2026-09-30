@@ -10,16 +10,17 @@ manifest = json.loads((root / 'manifest.json').read_text())
 package = json.loads((root / 'package.json').read_text())
 assert manifest['version'] == package['version'], 'Manifest/package versions differ'
 assert manifest['manifest_version'] == 3
-assert set(manifest['permissions']) == {'tabs', 'storage', 'favicon'}
+assert set(manifest['permissions']) == {'tabs', 'storage', 'favicon', 'offscreen'}
 assert not manifest.get('host_permissions') and not manifest.get('content_scripts')
 assert manifest['incognito'] == 'not_allowed'
 assert "connect-src 'none'" in manifest['content_security_policy']['extension_pages']
 files = [
     'manifest.json', 'background.js', 'core.js', 'early-input.js',
     'popup.html', 'popup.js', 'popup.css', 'tab.svg',
-    'options.html', 'options.css', 'options.js',
+    'options.html', 'options.css', 'options.js', 'theme.html', 'theme.js',
     'icons/icon.svg', 'icons/icon-16.png', 'icons/icon-32.png',
     'icons/icon-48.png', 'icons/icon-128.png',
+    'icons/icon-dark-16.png', 'icons/icon-dark-32.png', 'icons/icon-dark-48.png', 'icons/icon-dark-128.png',
     'README.md', 'TESTING.md', 'PERFORMANCE.md',
 ]
 for size, name in manifest['icons'].items():
@@ -27,6 +28,12 @@ for size, name in manifest['icons'].items():
     data = (root / name).read_bytes()
     assert data[:8] == b'\x89PNG\r\n\x1a\n'
     assert struct.unpack('>II', data[16:24]) == (int(size), int(size))
+for size in (16, 32, 48, 128):
+    name = f'icons/icon-dark-{size}.png'
+    assert name in files
+    data = (root / name).read_bytes()
+    assert data[:8] == b'\x89PNG\r\n\x1a\n'
+    assert struct.unpack('>II', data[16:24]) == (size, size)
 for name in manifest['action']['default_icon'].values():
     assert name in files
 assert manifest['background']['service_worker'] in files

@@ -1,5 +1,9 @@
 # Flytab verification
 
+## v0.6.3 automatic appearance check
+
+62 unit checks, 5 focused real offscreen/appearance checks, and 6 settings checks passed on Chrome for Testing 153. Offscreen setup is deduplicated; emulated dark/light changes update the real action icon; the document survives worker suspension and wakes the worker on a subsequent change. Unchanged local checks leave the worker stopped. The clean variants and settings header were visually reviewed. Two paired physical-footprint measurements show about 22–23 MiB additional memory. Headless speed comparisons found no slowdown; see PERFORMANCE.md for raw counts, medians and limits. Native foreground benchmarks could not run because the Mac was locked, so physical shortcut/focus timing is not newly verified. No 1,000-tab test was run.
+
 ## v0.6.2 settings and icon check
 
 All 60 unit checks and 6 focused settings checks passed. The settings suite loads the real extension in headless Chrome 153, compares displayed assignments with commands.getAll, and opens the real Chrome shortcut editor. Controlled page-only mocks cover returning after a remap, unassigned commands, failed reads/retry, and failed editor launch. Light/dark screenshots and narrow layouts were checked; the static icon was visually compared on white and dark-gray backgrounds. Background, early-input, popup JavaScript and popup CSS are unchanged from v0.6.1, so settings introduce no work into their paths. No performance benchmark or full native chord suite was run.
@@ -86,11 +90,11 @@ npm run browser:install
 npm run test:all
 ```
 
-The lockfile pins Playwright Core 1.63.0; `browser:install` installs its Chrome for Testing 153.0.8010.12 (revision 1243). `test:all` runs unit, native-window, pinned-action, popup DOM/recovery, and settings checks sequentially. Use `CHROME_PATH` to test another explicit Chrome for Testing or Chromium executable; record that version with the results. Set `FLYTAB_EVIDENCE` for screenshots/results; `PLAYWRIGHT_MODULE` can point to an existing Playwright Core module. The harnesses copy runtime files, add private hooks to that copy, and remove their temporary copy/profile afterward. The action suite pins only its disposable extension. Flytab has no Node, npm, or Playwright runtime dependency. Packaging uses Python 3’s standard library: `npm run package` validates permissions, icon sizes, matching versions, a fixed 19-file allowlist, and archive contents. Repeating it on unchanged sources produces the same ZIP.
+The lockfile pins Playwright Core 1.63.0; `browser:install` installs its Chrome for Testing 153.0.8010.12 (revision 1243). `test:all` runs unit, native-window, pinned-action, popup DOM/recovery, and settings checks sequentially. Use `CHROME_PATH` to test another explicit Chrome for Testing or Chromium executable; record that version with the results. Set `FLYTAB_EVIDENCE` for screenshots/results; `PLAYWRIGHT_MODULE` can point to an existing Playwright Core module. The harnesses copy runtime files, add private hooks to that copy, and remove their temporary copy/profile afterward. The action suite pins only its disposable extension. Flytab has no Node, npm, or Playwright runtime dependency. Packaging uses Python 3’s standard library: `npm run package` validates permissions, icon sizes, matching versions, a fixed 25-file allowlist, and archive contents. Repeating it on unchanged sources produces the same ZIP.
 
 ## Manual check
 
-1. Reload Flytab and verify version **0.6.2**. Pin its icon. Confirm Option+F is **Switch to previous tab** and Option+Shift+F is **Open recent tabs** in `chrome://extensions/shortcuts`.
+1. Reload Flytab and verify version **0.6.3**. Pin its icon. Confirm Option+F is **Switch to previous tab** and Option+Shift+F is **Open recent tabs** in `chrome://extensions/shortcuts`.
 2. Visit tabs in two windows, then quickly tap Option+F several times. Your two most recent tabs should alternate immediately without a popup. Repeat after the extension has been idle.
 3. Hold Option+Shift and tap F. The list should open beneath the pinned icon. Keep BOTH modifiers held and tap F several more times. Every tap must move forward; releasing F between taps must leave the list open. Keep cycling to check wrapping.
 4. Release Shift while keeping Option held: it should stay open. Release Option: the highlighted tab should activate and the list close. Repeat with Option released first, then Shift. Test left/right Option and Shift keys.

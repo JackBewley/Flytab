@@ -30,6 +30,9 @@ for (const name of ['manifest.json', 'background.js', 'core.js', 'early-input.js
   await cp(join(source, name), join(extension, name));
 }
 await cp(join(source, 'icons'), join(extension, 'icons'), { recursive: true });
+for (const name of ['options.html','options.css','options.js','theme.html','theme.js']) {
+  try { await cp(join(source,name),join(extension,name)); } catch (error) { if(error.code !== 'ENOENT') throw error; }
+}
 const manifest = JSON.parse(await readFile(join(extension, 'manifest.json'), 'utf8'));
 const version = manifest.version;
 if (pinned != null) {
@@ -45,6 +48,10 @@ if (pinned != null) {
 const sourceHashes = {};
 for (const file of ['background.js','core.js','early-input.js','popup.html','popup.js','popup.css']) {
   sourceHashes[file] = createHash('sha256').update(await readFile(join(extension,file))).digest('hex');
+}
+for (const file of ['theme.html','theme.js']) {
+  try { sourceHashes[file] = createHash('sha256').update(await readFile(join(extension,file))).digest('hex'); }
+  catch(error) { if(error.code !== 'ENOENT') throw error; }
 }
 const workerProbe = `
 // Benchmark-only probe, inserted in a temporary copy.
@@ -207,7 +214,7 @@ await appendFile(join(extension, 'early-input.js'), `
 `);
 await writeFile(join(extension, 'flytab-benchmark.html'), '<!doctype html><html><head><title>Flytab benchmark controller</title></head><body></body></html>');
 const context = await chromium.launchPersistentContext(join(scratch, 'profile'), {
-  executablePath: process.env.CHROME_PATH, headless: false, viewport: null,
+  executablePath: process.env.CHROME_PATH || chromium.executablePath(), headless: process.env.FLYTAB_HEADLESS === '1', viewport: null,
   args: [`--disable-extensions-except=${extension}`, `--load-extension=${extension}`]
 });
 let fixtureServer, fixtureOrigin;
@@ -233,7 +240,8 @@ const controller = await context.newPage();
 await controller.goto(origin + 'flytab-benchmark.html');
 const cdp = await context.newCDPSession(controller);
 const versions = new Map();
-cdp.on('ServiceWorker.workerVersionUpdated', event => { for (const version of event.versions) versions.set(version.versionId, version); });
+const stoppedVersions = new Set();
+cdp.on('ServiceWorker.workerVersionUpdated', event => { for (const version of event.versions) { versions.set(version.versionId, version); if(version.runningStatus === 'stopped') stoppedVersions.add(version.versionId); } });
 await cdp.send('ServiceWorker.enable');
 async function getWorker() {
   for (let attempt=0;attempt<100;attempt++) {
@@ -248,11 +256,12 @@ async function stopWorker() {
   const version = [...versions.values()].find(version => version.scriptURL === origin + 'background.js' && version.status === 'activated' && version.runningStatus === 'running');
   assert.ok(version, 'An active service-worker version must be available to stop');
   const priorStarted = await worker.evaluate(() => flytabBench.workerStarted);
+  stoppedVersions.delete(version.versionId);
   await cdp.send('ServiceWorker.stopWorker', {versionId:version.versionId});
   // Playwright can keep its Worker wrapper after Chrome stops the underlying
   // extension worker; CDP lifecycle plus a fresh script-start timestamp verify it.
   for (let attempt=0;attempt<100;attempt++) {
-    if (versions.get(version.versionId)?.runningStatus === 'stopped') return priorStarted;
+    if (stoppedVersions.has(version.versionId)) return priorStarted;
     await pause(20);
   }
   throw new Error('Chrome did not report the worker stopped');
@@ -281,6 +290,7 @@ try {
   await drain();
   const fixture = await worker.evaluate(async () => {
     const first = (await chrome.windows.getAll({windowTypes:['normal']}))[0];
+    await chrome.windows.update(first.id,{focused:true});
     return {windowId:first.id, ids:[]};
   });
   for (const count of sizes) {
@@ -314,6 +324,7 @@ try {
       const data = (await chrome.storage.session.get('flytab')).flytab;
       return {visited:data.order.filter(id=>ids.includes(id)).length, source:data.order[0]};
     }, fixture.ids);
+    if(fixtureOrder.visited !== count) console.log('Fixture diagnostics',await worker.evaluate(async()=>({windows:await chrome.windows.getAll({populate:true}),state:await chrome.storage.session.get('flytab'),errors:flytabBench.errors})));
     assert.equal(fixtureOrder.visited,count);
     assert.equal(fixtureOrder.source,fixture.ids.at(-1));
     if(toggleSamples) for(const mode of ['warm','worker-restarted']) {
@@ -417,7 +428,7 @@ try {
   }
   assert.deepEqual(errors,[]);
   const report={
-    source,version,sourceHashes,pinned,realistic,toggles,browser:context.browser().version(),createdAt:new Date().toISOString(),
+    source,version,sourceHashes,pinned,realistic,headless:process.env.FLYTAB_HEADLESS === '1',toggles,browser:context.browser().version(),createdAt:new Date().toISOString(),
     methodology:[
       'Temporary runtime-only extension copy; all probes and private command hooks are excluded from shipping source.',
       'Optional pinning uses a temporary public manifest key and fresh-profile Preferences; ordinary user profiles and source manifests are unchanged.',

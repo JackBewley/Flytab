@@ -16,6 +16,9 @@ for (const name of ['manifest.json', 'background.js', 'core.js', 'early-input.js
   await cp(join(source, name), join(extension, name));
 }
 await cp(join(source, 'icons'), join(extension, 'icons'), { recursive: true });
+for (const name of ['options.html','options.css','options.js','theme.html','theme.js']) {
+  try { await cp(join(source,name),join(extension,name)); } catch (error) { if(error.code !== 'ENOENT') throw error; }
+}
 await appendFile(join(extension, 'background.js'), '\nglobalThis.flytabTest = { command, enqueue, read };\n');
 await writeFile(join(extension, 'wake.html'), '<!doctype html><title>Flytab test wake</title>');
 const context = await chromium.launchPersistentContext(join(scratch, 'profile'), {

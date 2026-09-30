@@ -1,6 +1,6 @@
 {
   "name": "flytab",
-  "version": "0.6.4",
+  "version": "0.6.5",
   "private": true,
   "type": "module",
   "scripts": {
@@ -10,7 +10,7 @@
     "test:theme": "node tests/theme.mjs",
     "test:options": "node tests/options.mjs",
     "test:ui": "node tests/popup-ui.mjs",
-    "test:all": "npm test && npm run test:browser",
+    "test:all": "npm test && npm run test:browser && npm run test:theme",
     "benchmark": "node tests/startup.mjs",
     "package": "python3 scripts/package.py"
   },

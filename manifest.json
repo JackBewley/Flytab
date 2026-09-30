@@ -1,15 +1,14 @@
 {
   "manifest_version": 3,
   "name": "Flytab",
-  "version": "0.6.4",
+  "version": "0.6.5",
   "description": "Jump straight back to your previous Chrome tab, across windows.",
   "minimum_chrome_version": "121",
   "incognito": "not_allowed",
   "permissions": [
     "tabs",
     "storage",
-    "favicon",
-    "offscreen"
+    "favicon"
   ],
   "background": {
     "service_worker": "background.js",

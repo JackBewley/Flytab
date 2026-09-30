@@ -1,21 +1,18 @@
-// Chrome may suppress media-query change events in an offscreen document.
-// Check locally as a fallback; wake the worker only when appearance changes.
-const appearance = matchMedia('(prefers-color-scheme: dark)');
-let reportedDark;
-let reporting = false;
-async function reportAppearance() {
-  const dark = appearance.matches;
-  if (reporting || dark === reportedDark) return;
-  reporting = true;
+// Loaded only after a visible Flytab page is ready. No observer, polling,
+// worker message or stored preference is needed; the page owns this short task.
+let applying = false;
+export async function refreshIcon() {
+  if (document.hidden || applying) return;
+  const dark = matchMedia('(prefers-color-scheme: dark)').matches;
+  applying = true;
   try {
-    const response = await chrome.runtime.sendMessage({ type: 'flytab:theme', dark });
-    if (response?.ok) reportedDark = dark;
+    const suffix = dark ? '-dark' : '';
+    await chrome.action.setIcon({ path: {
+      16: `icons/icon${suffix}-16.png`, 32: `icons/icon${suffix}-32.png`
+    } });
   } catch {
-    // Keep Chrome's last icon; the next local check retries.
+    // Cosmetic failure must never interrupt switching. Retry on a later open.
   } finally {
-    reporting = false;
+    applying = false;
   }
 }
-appearance.addEventListener('change', reportAppearance);
-setInterval(reportAppearance, 5000);
-void reportAppearance();

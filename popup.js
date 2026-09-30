@@ -43,6 +43,12 @@ async function request(type, extra = {}) {
 // loading. Selection actions wait for it, but focus and cancellation do not.
 const ready = early.ready.then(receive);
 void ready.catch(problem => { if (!finished) showError(problem); });
+// Keep appearance loading and decoding out of initial input/render readiness.
+void Promise.all([ready, early.commandsReady]).then(() => {
+  requestIdleCallback(() => {
+    if (!finished) void import('./theme.js').then(theme => theme.refreshIcon()).catch(() => {});
+  });
+}, () => {});
 
 function showError(problem) {
   errorOperation = problem.expired || !current ? 'session' : problem.operation;

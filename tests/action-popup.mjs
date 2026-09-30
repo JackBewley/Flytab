@@ -74,6 +74,10 @@ await appendFile(join(extension, 'background.js'), '\nflytabActionTest.drain = (
 // through private runtime hooks in this copy, while exercising production input.
 await appendFile(join(extension, 'early-input.js'), String.raw`
 ;(() => {
+  const icons = [];
+  let iconHadInput = false;
+  const setIcon = chrome.action.setIcon.bind(chrome.action);
+  chrome.action.setIcon = async args => { iconHadInput = window.flytabInput.ownsCommands && document.querySelector('#tabs')?.getAttribute('aria-busy') === 'false'; await setIcon(args); icons.push(args.path); };
   const token = new URL(location.href).searchParams.get('session');
   let rememberedRows = null;
   let inputPort = null;
@@ -118,7 +122,7 @@ await appendFile(join(extension, 'early-input.js'), String.raw`
       if (request.op === 'trace') {respond({ok:true,trace:window.flytabInput.trace});return;}
       if (request.op === 'inspect' || request.op === 'remember') {
         if (request.op === 'remember') rememberedRows = rows;
-        respond({ ok: true, token, inputReady, commitPending: Boolean(rejectCommit), disconnected: window.flytabInput.disconnected, ready: inputReady && Boolean(window.flytabInput.handle) && list?.getAttribute('aria-busy') === 'false',
+        respond({ ok: true, token, icons, iconHadInput, dark: matchMedia('(prefers-color-scheme: dark)').matches, inputReady, commitPending: Boolean(rejectCommit), disconnected: window.flytabInput.disconnected, ready: inputReady && Boolean(window.flytabInput.handle) && list?.getAttribute('aria-busy') === 'false',
           width: innerWidth, documentWidth: document.documentElement.scrollWidth, listHeight: list?.getBoundingClientRect().height,
           listMaxHeight: list && getComputedStyle(list).maxHeight,
           busy: list?.getAttribute('aria-busy'), focused: document.hasFocus(), activeElement: document.activeElement?.id,
@@ -248,7 +252,7 @@ function pass(name) { results.push(name); console.log('PASS', name); }
 try {
   assert.equal(origin, `chrome-extension://${extensionId}/`);
   assert.equal((await worker.evaluate(() => chrome.action.getUserSettings())).isOnToolbar, true);
-  assert.deepEqual(manifest.permissions, ['tabs', 'storage', 'favicon', 'offscreen']);
+  assert.deepEqual(manifest.permissions, ['tabs', 'storage', 'favicon']);
   assert.ok(!manifest.action.default_popup);
   pass('temporary profile pins Flytab without adding production permissions or default popup');
   await settle();
@@ -292,6 +296,11 @@ try {
   assert.equal((await worker.evaluate(() => chrome.windows.getAll())).length, windowCount);
   assert.equal(await worker.evaluate(() => chrome.action.getPopup({})), '');
   pass('pinned command opens a focused action bubble at previous MRU without creating a browser window');
+  for (let i = 0; i < 100 && !view.icons.length; i++) { await pause(20); view = await inspect(); }
+  assert.equal(view.icons.at(-1)?.[16], view.dark ? 'icons/icon-dark-16.png' : 'icons/icon-16.png');
+  assert.equal(view.icons.length, 1);
+  assert.equal(view.iconHadInput, true);
+  pass('visible action popup refreshes the actual toolbar icon once after readiness');
   await key('End');
   assert.equal((await state()).session.index,(await state()).session.ids.length-1);
   await key('Home');

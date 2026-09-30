@@ -15,7 +15,7 @@ try {
   page.on('pageerror',error=>errors.push(error.message));
   await page.route('https://flytab.test/**',async route=>{
     const name = new URL(route.request().url()).pathname.slice(1);
-    if (!['popup.html','popup.js','popup.css','early-input.js','tab.svg','icons/icon-32.png'].includes(name)) return route.abort();
+    if (!['popup.html','popup.js','popup.css','early-input.js','theme.js','tab.svg','icons/icon-32.png'].includes(name)) return route.abort();
     await route.fulfill({body:await readFile(join(root,name)),contentType:name.endsWith('.js')?'text/javascript':name.endsWith('.css')?'text/css':name.endsWith('.svg')?'image/svg+xml':name.endsWith('.png')?'image/png':'text/html'});
   });
   await page.addInitScript(()=>{

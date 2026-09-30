@@ -1,5 +1,11 @@
 # Flytab verification
 
+## v0.6.5 refresh-on-open
+
+71 unit, 19 pinned-action, 8 popup DOM/recovery, 6 settings and 7 appearance/lifecycle checks passed (111 total). Real setIcon calls occur after list rendering and authenticated input ownership. Light/dark appearance refreshes when settings opens or regains focus; a theme change alone does no work. No offscreen permission/document or polling remains, and closing the UI then stopping the worker leaves no extension target. Cosmetic failures retry on a later opening without affecting settings. Existing held-F, release, cancellation, toolbar, cross-window/MRU and worker-loss checks passed. Run `npm run test:theme` for the focused appearance suite; `npm run test:all` now includes it.
+
+Two balanced native speed pairs at 8/120 tabs show about 1–2 ms slower quick toggles and 0.5–4.2 ms slower opening, with comparable navigation. See PERFORMANCE.md for exact medians, prior memory evidence and limitations. No 1,000-tab run, full native-fallback rerun or physical-keyboard retest was performed. Reload version **0.6.5** in Chrome. Open the switcher/settings to refresh the icon; change device appearance and reopen to confirm the other clean variant. The icon can remain stale between openings or after a popup closes before idle work runs. Existing shortcut assignments and list behavior are preserved.
+
 ## v0.6.4 allocation and native speed checks
 
 69 unit, 18 pinned-action and 31 native-fallback checks passed (118 total). The new quick-toggle path covers closed/ineligible destinations, missing history, source changes, failed activation and toolbar use; real browser checks cover cross-window focus and worker restart. Balanced native measurements at 8/120 tabs show about 16% lower quick-toggle medians at 120 tabs and comparable small-history performance. Separate diagnostics reduce healthy-toggle metadata from about 100 KiB to under 1 KiB at 120 tabs. No full/1,000-tab suite was run. Native focus timing is now verified; physical held-key events are not remeasured. Appearance code is unchanged. See PERFORMANCE.md for the complete methods and the unchanged resident-icon memory cost.

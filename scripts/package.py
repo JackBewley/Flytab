@@ -10,14 +10,14 @@ manifest = json.loads((root / 'manifest.json').read_text())
 package = json.loads((root / 'package.json').read_text())
 assert manifest['version'] == package['version'], 'Manifest/package versions differ'
 assert manifest['manifest_version'] == 3
-assert set(manifest['permissions']) == {'tabs', 'storage', 'favicon', 'offscreen'}
+assert set(manifest['permissions']) == {'tabs', 'storage', 'favicon'}
 assert not manifest.get('host_permissions') and not manifest.get('content_scripts')
 assert manifest['incognito'] == 'not_allowed'
 assert "connect-src 'none'" in manifest['content_security_policy']['extension_pages']
 files = [
     'manifest.json', 'background.js', 'core.js', 'early-input.js',
     'popup.html', 'popup.js', 'popup.css', 'tab.svg',
-    'options.html', 'options.css', 'options.js', 'theme.html', 'theme.js',
+    'options.html', 'options.css', 'options.js', 'theme.js',
     'icons/icon.svg', 'icons/icon-16.png', 'icons/icon-32.png',
     'icons/icon-48.png', 'icons/icon-128.png',
     'icons/icon-dark-16.png', 'icons/icon-dark-32.png', 'icons/icon-dark-48.png', 'icons/icon-dark-128.png',

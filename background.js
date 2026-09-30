@@ -420,12 +420,6 @@ async function message(request, sender) {
 }
 
 chrome.runtime.onMessage.addListener((request, sender, respond) => {
-  if (request?.type === 'flytab:theme') {
-    if (sender.id !== chrome.runtime.id || sender.url !== ORIGIN + 'theme.html' || sender.tab || typeof request.dark !== 'boolean') return;
-    // Cosmetic work has its own queue; never joins or blocks MRU operations.
-    void updateThemeIcon(request.dark).then(() => respond({ ok: true }), () => respond({ ok: false }));
-    return true;
-  }
   if (!['flytab:get', 'flytab:move', 'flytab:commit', 'flytab:cancel'].includes(request?.type)) return;
   void (async () => {
     try { respond(await enqueue(() => message(request, sender))); }
@@ -577,47 +571,10 @@ chrome.windows.onRemoved.addListener(windowId => {
   });
 });
 
-chrome.runtime.onInstalled.addListener(() => { void enqueue(read); void ensureThemeDocument(); });
-chrome.runtime.onStartup.addListener(() => { void enqueue(read); void ensureThemeDocument(); });
+chrome.runtime.onInstalled.addListener(() => { void enqueue(read); });
+chrome.runtime.onStartup.addListener(() => { void enqueue(read); });
 
 // Recover the temporary toolbar setting if a prior worker was interrupted
 // between configuring an action popup and clearing it. This runs before queued
 // commands in each worker lifetime and never changes the user's pin setting.
 void enqueue(() => chrome.action.setPopup({ popup: '' }));
-
-// Created at install/update/browser startup, not on tab commands or worker wakes.
-// The document checks locally; unchanged appearance never wakes this worker.
-let creatingThemeDocument = null;
-let themeIconTail = Promise.resolve();
-let appliedDark = null;
-function updateThemeIcon(dark) {
-  const next = themeIconTail.catch(() => {}).then(async () => {
-    if (appliedDark === dark) return;
-    const suffix = dark ? '-dark' : '';
-    await chrome.action.setIcon({ path: {
-      16: `icons/icon${suffix}-16.png`, 32: `icons/icon${suffix}-32.png`
-    } });
-    appliedDark = dark;
-  });
-  themeIconTail = next;
-  return next;
-}
-async function ensureThemeDocument() {
-  if (creatingThemeDocument) return creatingThemeDocument;
-  creatingThemeDocument = (async () => {
-    try {
-      const contexts = await chrome.runtime.getContexts({
-        contextTypes: ['OFFSCREEN_DOCUMENT'], documentUrls: [ORIGIN + 'theme.html']
-      });
-      if (!contexts.length) await chrome.offscreen.createDocument({
-        url: 'theme.html', reasons: ['MATCH_MEDIA'],
-        justification: 'Follow light/dark appearance changes for the toolbar icon.'
-      });
-    } catch (error) {
-      console.error('Flytab icon appearance:', error.message);
-    } finally {
-      creatingThemeDocument = null;
-    }
-  })();
-  return creatingThemeDocument;
-}

@@ -253,3 +253,17 @@ test('plain Home/End releases never commit when their keys are also remapped sho
     assert.equal(window.flytabInput.pending[2].type,'keyup','configured chord retains release recovery');
   }
 });
+
+test('cosmetic readiness waits for authenticated command ownership without delaying initial data', async () => {
+  const h = capture();
+  let acknowledged = false;
+  void h.window.flytabInput.commandsReady.then(() => { acknowledged = true; });
+  await h.window.flytabInput.ready;
+  await h.window.flytabInput.shortcutsReady;
+  assert.equal(acknowledged, false);
+  h.ports[0].receive({ type: 'unrelated' });
+  await Promise.resolve(); assert.equal(acknowledged, false);
+  h.ports[0].receive({ type: 'flytab:input-ready' });
+  await h.window.flytabInput.commandsReady;
+  assert.equal(acknowledged, true);
+});

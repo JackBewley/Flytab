@@ -25,6 +25,9 @@ async function refreshShortcuts() {
     showError('Could not read your shortcuts. Retry, or open Chrome’s shortcut settings.');
   } finally {
     refreshing = false;
+    requestIdleCallback(() => {
+      void import('./theme.js').then(theme => theme.refreshIcon()).catch(() => {});
+    });
   }
 }
 

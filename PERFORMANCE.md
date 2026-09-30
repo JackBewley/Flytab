@@ -2,9 +2,32 @@
 
 The goal is to make the switcher receive keyboard input sooner while keeping the immediate Option+F toggle, frozen preview order, release-to-select behavior, and existing permissions. A release that occurs before Chrome focuses the extension document is still unrecoverable.
 
-## Total-memory baseline and appearance-setting design (not applied)
+## v0.6.5 refresh-on-open
 
-After asking about optional automatic icons and refresh-on-open, the user asked for Flytab's memory without the appearance watcher. A new measurement compares three fresh isolated headless Chrome 153 profiles, each with the same eight visited blank tabs: no extension; current Flytab with only the two appearance-document startup calls disabled in a temporary copy; and current Flytab with automatic appearance. The no-auto copy retains the permission, bundled files and dormant appearance functions, modeling a disabled setting rather than deleting the feature. No production runtime/settings were changed.
+The user selected refresh-on-open. The offscreen document, its permission, media-query listener, five-second polling and worker theme-message handler are removed. Existing clean light/dark icons remain. A visible switcher waits for both initial list rendering and authenticated command ownership before scheduling an idle callback that dynamically imports theme.js. Settings schedules the same helper after reading its shortcuts, including on return. The helper calls action.setIcon directly; it has no worker message, MRU operation, durable preference, or persistent timer. Concurrent calls from one document coalesce. An extremely brief popup can close before the idle refresh; the next opening retries. Appearance errors never block switching.
+
+**Memory:** the lifecycle check confirms no offscreen context on installation and no extension document/worker target after closing the UI and explicitly stopping the worker. Removing the resident watcher is expected to save its previously measured roughly **20–30 MiB idle physical footprint** (22–23 MiB in the one-tab pairs, 24–26 MiB in the eight-tab pairs below). Those are prior paired measurements, not a fresh whole-process measurement of v0.6.5. Visible UI and an active worker still use memory; do not add the idle saving to warm-worker usage as independent constants. A settings tab deliberately left open remains a visible extension page.
+
+**Speed:** icon work waits until the list owns input and stays out of quick-toggle handlers and the MRU queue. Nevertheless, two balanced fresh-profile native pairs show a small measured cost relative to v0.6.4: quick toggles are 1.4–1.9 ms slower, popup readiness 0.5–4.2 ms slower, and navigation comparable. Do not call this zero slowdown or claim a proven cause. Removing the resident document changes Chrome's process scheduling/residency; these tests do not isolate that from other runtime variation.
+
+Median milliseconds (v0.6.4 → v0.6.5):
+
+| Visited tabs / worker | Quick toggle | Popup fully ready | Navigate one entry |
+|---|---:|---:|---:|
+| 8 / warm | 5.7 → 7.2 | 31.9 → 34.5 | 0.8 → 0.9 |
+| 8 / worker-restarted | 6.0 → 7.8 | 34.3 → 34.8 | 0.8 → 0.9 |
+| 120 / warm | 6.4 → 8.2 | 41.7 → 43.1 | 2.0 → 1.9 |
+| 120 / worker-restarted | 7.9 → 9.7 | 39.9 → 44.0 | 1.9 → 1.9 |
+
+Chrome for Testing 153.0.8010.12; 8/120 visited blank fixtures; pinned native action popup. Final pairs total 96 openings, 192 toggles and 288 navigation steps. The recorded ready point includes actual document focus and command ownership. Commands and subsequent keys are automated, not physical-key/compositor-paint timing. Worker-restarted means the service worker was stopped, not that every extension renderer was reclaimed: the controller is an extension page. Fully cold renderer recreation is not quantified. No 1,000-tab suite was run. Earlier pairs 1/2 used the preliminary implementation that waited only for list data; they remain as diagnostic evidence and are excluded from the final table.
+
+Verification: **71 unit + 19 pinned-action + 8 popup DOM/recovery + 6 settings + 7 appearance/lifecycle checks = 111 passing checks**. The action test observes a real successful setIcon call only after list readiness and input ownership. The theme suite verifies dark/light updates on opening/return, no continuous refresh, cosmetic failure/retry, no appearance work on quick toggle and no hidden context after closure. The existing keyboard release, cancel, cross-window commit, source/destination MRU, toolbar and worker-loss checks pass. Native fallback and physical-keyboard suites were not rerun for this small change.
+
+Evidence: test-evidence/0.6.5/{before,after}-{3,4}.json, comparison.json, theme.json, action/action-results.json, settings/options-results.json and ui/popup-ui.json. No test hooks or browser profiles ship. The package contains 24 allowlisted files. Reload v0.6.5, open the switcher once, and check the icon; after changing device appearance it updates on the next opening, not continuously.
+
+## Earlier total-memory baseline and appearance-setting proposal
+
+After asking about optional automatic icons and refresh-on-open, the user asked for Flytab's memory without the appearance watcher. A new measurement compares three fresh isolated headless Chrome 153 profiles, each with the same eight visited blank tabs: no extension; v0.6.4 with only the two appearance-document startup calls disabled in a temporary copy; and v0.6.4 with automatic appearance. The no-auto copy retains the permission, bundled files and dormant appearance functions, modeling a disabled setting rather than deleting the feature. No production runtime/settings were changed.
 
 Each profile is sampled with a warm worker and no popup, then after an explicit worker stop and twelve seconds of settling. Explicit stopping avoids the inspection tool keeping a worker alive; it measures the sleeping state, not natural timeout timing. Sum of macOS `vmmap -summary` physical footprints across that browser's processes, MiB:
 
@@ -27,7 +50,7 @@ Evidence: `test-evidence/memory-baseline/{none,noauto,auto}-{1,2}.json`; reprodu
 
 ## Options study: manual icon and a 20-entry history (not applied)
 
-The user asked to compare options after v0.6.4. Shipping runtime remains commit `2c840b4`; no history limit or icon change was applied. Isolated copies under `work/options-study/` compare normal history with a prototype that caps promotion, commit, reconstruction and reconciliation at 20 entries, including the current tab. Both retain automatic icons. Ordinary tabs remain open. Full live-tab queries still reconcile history; this is a bounded-history prototype, not a rewrite of tab lookup or popup rendering.
+The user asked to compare options after v0.6.4. At the time of this study, shipping runtime was commit `2c840b4`; no history limit or icon change was applied. Isolated copies under `work/options-study/` compare normal history with a prototype that caps promotion, commit, reconstruction and reconciliation at 20 entries, including the current tab. Both retain automatic icons. Ordinary tabs remain open. Full live-tab queries still reconcile history; this is a bounded-history prototype, not a rewrite of tab lookup or popup rendering.
 
 **Manual icon:** the prior paired physical-footprint measurements estimate about **22–23 MiB saved while idle** by removing the offscreen appearance document. A manual Light/Dark setting could retain clean icons without a resident appearance watcher. No switching speed gain is established from removing the watcher; an absent renderer may need to be recreated for a cold popup. The existing native pre-theme comparison is documented below. This option was not remeasured in this study.
 

@@ -97,6 +97,9 @@
     clearInterval(previous.interval);
     previous.port.disconnect();
   };
+  // Cosmetics may wait for this first acknowledgement without delaying input.
+  let acknowledgeCommands;
+  input.commandsReady = new Promise(resolve => { acknowledgeCommands = resolve; });
   const connect = () => {
     if (input.blurred || input.disconnected) return;
     const owner = { port: chrome.runtime.connect({ name: 'flytab-input:' + token }), intentional: false, interval: null };
@@ -104,6 +107,7 @@
     owner.port.onMessage.addListener(message => {
       if (connection !== owner || message?.type !== 'flytab:input-ready') return;
       input.ownsCommands = true;
+      acknowledgeCommands();
       // Port traffic keeps the worker alive only while this visible picker is
       // in use. This timer never infers key state or commits a selection.
       clearInterval(owner.interval);

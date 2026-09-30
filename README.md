@@ -9,13 +9,13 @@ Jump straight back to the Chrome tab you were just on, across windows. A minimal
 3. **Pin Flytab** from Chrome's Extensions menu for the fastest switcher opening and the toolbar shortcut.
 4. Open `chrome://extensions/shortcuts`. Confirm **Switch to previous tab** is **Option+F** and **Open recent tabs** is **Option+Shift+F** on macOS. If it is blank or conflicts with another shortcut, assign one. Keep its scope **In Chrome**.
 
-After updating, click **Reload** on Flytab's extension card and confirm version **0.6.4**. Existing shortcut assignments are preserved; check the shortcuts page if you previously remapped them. No separate app is needed.
+After updating, click **Reload** on Flytab's extension card and confirm version **0.6.5**. Existing shortcut assignments are preserved; check the shortcuts page if you previously remapped them. No separate app is needed.
 
 ## Settings
 
 Right-click the Flytab toolbar icon and choose **Options**. The settings page shows your current shortcuts; **Change shortcuts in Chrome** opens Chrome’s editor. Assign your keys under Flytab and keep the scope **In Chrome**. Returning to Flytab settings refreshes the displayed assignments. Chrome owns the bindings; Flytab does not store a second copy.
 
-The toolbar icon follows the device’s light/dark appearance, using clean charcoal or pale strokes with no outline. A hidden extension document checks the preference every five seconds because Chrome can suppress change events there; it contacts the worker only when the appearance changes. Chrome may defer background checks, and a custom Chrome theme can differ from the device preference. This does not add a wait to tab switching.
+The toolbar icon refreshes to the device’s light/dark appearance when the switcher or settings opens, and when you return to settings. It uses clean charcoal or pale strokes with no outline. The update runs after the page is ready, with no hidden document or background polling. After an appearance change or browser restart, the icon may keep its previous/default color until the next opening. If the popup closes before its idle update, the next opening tries again. Option+F and toolbar clicks open no UI and do not refresh it. Custom Chrome themes can differ from the device preference.
 
 ## Use
 
@@ -58,7 +58,6 @@ When Flytab is pinned in a supported Chrome version (127+), the list opens benea
 
 - **tabs**: open-tab titles/IDs/window IDs and activation events. Chrome may describe this as reading browsing history; Flytab does not use the History API.
 - **storage**: `storage.session` holds tab IDs, MRU order, and the open switcher's selection. It survives worker suspension and is cleared when Chrome exits or the extension reloads/disables. The popup’s document ID may also be held for sender validation. A boolean records whether the toolbar has a recoverable error. Titles, URLs and favicons are read live, not persisted by Flytab.
-- **offscreen**: a small hidden document reads the device’s light/dark preference for the toolbar icon. It uses no website access, network, or persistent worker connection. Measurements are documented in PERFORMANCE.md.
 - **favicon**: reads Chrome's local favicon cache via its own extension URL. Loading remote `favIconUrl` images could make network requests, so Flytab never does that. Missing/internal-page icons use a bundled generic tab icon.
 
 No host permissions, content scripts, History API, analytics, server, account, or external network requests. CSP blocks external connections and images. Commands/action/windows APIs require no separate permission entries. Incognito is disabled in the manifest and filtered defensively.

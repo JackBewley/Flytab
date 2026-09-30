@@ -1,5 +1,9 @@
 # Flytab verification
 
+## v0.6.4 allocation and native speed checks
+
+69 unit, 18 pinned-action and 31 native-fallback checks passed (118 total). The new quick-toggle path covers closed/ineligible destinations, missing history, source changes, failed activation and toolbar use; real browser checks cover cross-window focus and worker restart. Balanced native measurements at 8/120 tabs show about 16% lower quick-toggle medians at 120 tabs and comparable small-history performance. Separate diagnostics reduce healthy-toggle metadata from about 100 KiB to under 1 KiB at 120 tabs. No full/1,000-tab suite was run. Native focus timing is now verified; physical held-key events are not remeasured. Appearance code is unchanged. See PERFORMANCE.md for the complete methods and the unchanged resident-icon memory cost.
+
 ## v0.6.3 automatic appearance check
 
 62 unit checks, 5 focused real offscreen/appearance checks, and 6 settings checks passed on Chrome for Testing 153. Offscreen setup is deduplicated; emulated dark/light changes update the real action icon; the document survives worker suspension and wakes the worker on a subsequent change. Unchanged local checks leave the worker stopped. The clean variants and settings header were visually reviewed. Two paired physical-footprint measurements show about 22–23 MiB additional memory. Headless speed comparisons found no slowdown; see PERFORMANCE.md for raw counts, medians and limits. Native foreground benchmarks could not run because the Mac was locked, so physical shortcut/focus timing is not newly verified. No 1,000-tab test was run.
@@ -94,7 +98,7 @@ The lockfile pins Playwright Core 1.63.0; `browser:install` installs its Chrome 
 
 ## Manual check
 
-1. Reload Flytab and verify version **0.6.3**. Pin its icon. Confirm Option+F is **Switch to previous tab** and Option+Shift+F is **Open recent tabs** in `chrome://extensions/shortcuts`.
+1. Reload Flytab and verify version **0.6.4**. Pin its icon. Confirm Option+F is **Switch to previous tab** and Option+Shift+F is **Open recent tabs** in `chrome://extensions/shortcuts`.
 2. Visit tabs in two windows, then quickly tap Option+F several times. Your two most recent tabs should alternate immediately without a popup. Repeat after the extension has been idle.
 3. Hold Option+Shift and tap F. The list should open beneath the pinned icon. Keep BOTH modifiers held and tap F several more times. Every tap must move forward; releasing F between taps must leave the list open. Keep cycling to check wrapping.
 4. Release Shift while keeping Option held: it should stay open. Release Option: the highlighted tab should activate and the list close. Repeat with Option released first, then Shift. Test left/right Option and Shift keys.

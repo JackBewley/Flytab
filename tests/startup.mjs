@@ -18,6 +18,8 @@ const source = resolve(process.env.FLYTAB_SOURCE || join(dirname(fileURLToPath(i
 const evidence = process.env.FLYTAB_EVIDENCE;
 const realistic = process.env.FLYTAB_REALISTIC === '1';
 const moveSamples = Number(process.env.FLYTAB_MOVE_SAMPLES || 0);
+// Separate diagnostic runs only: serialization here deliberately adds work.
+const profileMetadata = process.env.FLYTAB_PROFILE_METADATA === '1';
 const toggleSamples = Number(process.env.FLYTAB_TOGGLE_SAMPLES || 0);
 const pinned = process.env.FLYTAB_ACTION_PINNED == null ? null : process.env.FLYTAB_ACTION_PINNED === '1';
 const sizes = (process.env.FLYTAB_TAB_COUNTS || '8,120').split(',').map(Number);
@@ -57,6 +59,7 @@ const workerProbe = `
 // Benchmark-only probe, inserted in a temporary copy.
 const flytabBench = globalThis.flytabBench = {
   workerStarted: performance.timeOrigin + performance.now(), calls: [], marks: {}, command: null, popup: null, errors: [],
+  metadata: null,
   now: () => performance.timeOrigin + performance.now()
 };
 for (const [object, name, label] of [
@@ -76,6 +79,15 @@ for (const [object, name, label] of [
     const opening = label === 'windows.create' || label === 'action.openPopup';
     if (opening) { flytabBench.marks.windowCreateStart = at; flytabBench.marks.openingApi = label; }
     const result = original(...args);
+    if (${profileMetadata} && flytabBench.metadata && result?.then &&
+        ['tabs.query', 'tabs.get', 'windows.getLastFocused'].includes(label)) {
+      const stats = flytabBench.metadata;
+      result.then(value => {
+        const tabs = label === 'tabs.query' ? value : label === 'tabs.get' ? [value] : value.tabs || [];
+        stats.tabObjects += tabs.length;
+        stats.jsonBytes += new TextEncoder().encode(JSON.stringify(tabs)).length;
+      }, () => {});
+    }
     if (opening && result?.then) {
       result.then(() => { flytabBench.marks.windowCreateResolved = flytabBench.now(); }, () => {});
     }
@@ -118,7 +130,12 @@ chrome.runtime.onMessage.addListener((request, sender, respond) => {
   }
   if (request?.type === 'flytab-benchmark:toggle') {
     const started = flytabBench.now();
-    void enqueue(() => command('switch-next')).then(() => respond({ok:true,ms:flytabBench.now()-started}), error => respond({ok:false,error:error.message}));
+    if (${profileMetadata}) flytabBench.metadata = {tabObjects:0,jsonBytes:0};
+    void enqueue(() => command('switch-next')).then(() => {
+      const metadata = flytabBench.metadata;
+      flytabBench.metadata = null;
+      respond({ok:true,ms:flytabBench.now()-started,...(metadata ? {metadata} : {})});
+    }, error => {flytabBench.metadata = null; respond({ok:false,error:error.message});});
     return true;
   }
   if (request?.type !== 'flytab-benchmark:open') return;
@@ -428,7 +445,7 @@ try {
   }
   assert.deepEqual(errors,[]);
   const report={
-    source,version,sourceHashes,pinned,realistic,headless:process.env.FLYTAB_HEADLESS === '1',toggles,browser:context.browser().version(),createdAt:new Date().toISOString(),
+    source,version,sourceHashes,pinned,realistic,profileMetadata,headless:process.env.FLYTAB_HEADLESS === '1',toggles,browser:context.browser().version(),createdAt:new Date().toISOString(),
     methodology:[
       'Temporary runtime-only extension copy; all probes and private command hooks are excluded from shipping source.',
       'Optional pinning uses a temporary public manifest key and fresh-profile Preferences; ordinary user profiles and source manifests are unchanged.',

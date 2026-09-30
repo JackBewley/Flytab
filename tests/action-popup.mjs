@@ -248,7 +248,7 @@ function pass(name) { results.push(name); console.log('PASS', name); }
 try {
   assert.equal(origin, `chrome-extension://${extensionId}/`);
   assert.equal((await worker.evaluate(() => chrome.action.getUserSettings())).isOnToolbar, true);
-  assert.deepEqual(manifest.permissions, ['tabs', 'storage', 'favicon']);
+  assert.deepEqual(manifest.permissions, ['tabs', 'storage', 'favicon', 'offscreen']);
   assert.ok(!manifest.action.default_popup);
   pass('temporary profile pins Flytab without adding production permissions or default popup');
   await settle();

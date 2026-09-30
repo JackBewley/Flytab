@@ -43,16 +43,26 @@ function harness() {
       })
     } },
     tabs: {
-      query: record('tabs.query', async () => gates.query ? await gates.query.promise : structuredClone(tabs)),
+      query: record('tabs.query', async (filter = {}) => {
+        if (gates.query) return await gates.query.promise;
+        const focused = [...windows.values()].find(window => window.focused);
+        return structuredClone(tabs.filter(tab => (!filter.active || tab.active) &&
+          (!filter.lastFocusedWindow || tab.windowId === focused?.id)));
+      }),
       get: record('tabs.get', async id => structuredClone(tabs.find(tab => tab.id === id))),
-      update: record('tabs.update', async (id, props) => Object.assign(tabs.find(tab => tab.id === id), props)),
+      update: record('tabs.update', async (id, props) => {
+        if (gates.update) throw Error('Activation failed');
+        const target = tabs.find(tab => tab.id === id);
+        if (props.active) for (const tab of tabs) if (tab.windowId === target.windowId) tab.active = tab.id === id;
+        return Object.assign(target, props);
+      }),
       onActivated: event('activated'), onCreated: event('created'), onRemoved: event('removed'), onReplaced: event('replaced')
     },
     windows: {
       WINDOW_ID_NONE: -1,
-      getLastFocused: record('windows.getLastFocused', async () => {
+      getLastFocused: record('windows.getLastFocused', async (options = {}) => {
         const parent = [...windows.values()].find(window => window.focused);
-        return { ...parent, tabs: structuredClone(tabs.filter(tab => tab.windowId === parent.id)) };
+        return { ...parent, ...(options.populate ? { tabs: structuredClone(tabs.filter(tab => tab.windowId === parent.id)) } : {}) };
       }),
       get: record('windows.get', async id => {
         if (!windows.has(id)) throw new Error('Window closed');
@@ -244,4 +254,68 @@ test('a single-tab switcher keeps the current tab selected in its only row', asy
   await h.controller.command('switch-previous');
   assert.deepEqual(Array.from(h.state.session.ids), [1]);
   assert.equal(h.state.session.index, 0);
+});
+
+
+test('quick command and toolbar alternate the two live MRU tabs without a full metadata scan', async () => {
+  const h = harness();
+  await h.controller.enqueue(() => h.controller.command('switch-next'));
+  assert.deepEqual(h.state.order, [2, 1, 3]);
+  assert.equal(h.calls.filter(c => c.name === 'tabs.get').length, 1);
+  h.listeners.click();
+  await h.controller.enqueue(async () => {});
+  assert.deepEqual(h.state.order, [1, 2, 3]);
+  assert.equal(h.calls.filter(c => c.name === 'tabs.query' && !c.args[0]?.active).length, 0);
+  assert.equal(h.calls.filter(c => c.name === 'windows.getLastFocused' && c.args[0]?.populate).length, 0);
+  assert.equal(h.calls.filter(c => c.name === 'tabs.get').length, 2);
+});
+
+test('quick toggle activates the cross-window destination before focusing its window', async () => {
+  const h = harness(); h.state.order = [1, 3, 2];
+  await h.controller.command('switch-next');
+  assert.deepEqual(h.state.order, [3, 1, 2]);
+  const calls = h.calls.filter(c => ['tabs.update', 'windows.update'].includes(c.name));
+  assert.equal(calls[0].name, 'tabs.update'); assert.equal(calls[0].args[0], 3);
+  assert.equal(calls[1].name, 'windows.update'); assert.equal(calls[1].args[0], 11);
+});
+
+test('a closed quick-toggle destination is pruned before choosing the next live tab', async () => {
+  const h = harness(); h.tabs = h.tabs.filter(tab => tab.id !== 2);
+  await h.controller.command('switch-next');
+  assert.deepEqual(h.state.order, [3, 1]);
+  assert.equal(h.calls.filter(c => c.name === 'tabs.query' && !c.args[0]?.active).length, 1);
+});
+
+test('quick toggle reconciles ineligible destinations instead of activating them', async () => {
+  for (const replacement of [{incognito:true}, {url:'chrome-extension://flytab/options.html'}]) {
+    const h = harness(); Object.assign(h.tabs[1], replacement);
+    await h.controller.command('switch-next');
+    assert.deepEqual(h.state.order, [3, 1]);
+    assert.equal(h.calls.find(c => c.name === 'tabs.update').args[0], 3);
+  }
+});
+
+test('quick toggle reconstructs missing history and retains only the current tab when alone', async () => {
+  const h = harness(); h.state = null;
+  await h.controller.command('switch-next');
+  assert.deepEqual(h.state.order, [2, 1, 3]);
+  const single = harness(); single.tabs = single.tabs.slice(0, 1);
+  await single.controller.command('switch-next');
+  assert.deepEqual(single.state.order, [1]);
+  assert.equal(single.calls.filter(c => c.name === 'tabs.update').length, 0);
+});
+
+test('quick toggle resolves the current tab even before its activation event updates MRU', async () => {
+  const h = harness();
+  h.tabs[0].active = false; h.tabs[1].active = true;
+  await h.controller.command('switch-next');
+  assert.deepEqual(h.state.order, [1, 2, 3]);
+  assert.equal(h.calls.find(c => c.name === 'tabs.update').args[0], 1);
+});
+
+test('a failed fast activation does not save a reordered MRU', async () => {
+  const h = harness(); h.gates.update = true;
+  await assert.rejects(h.controller.command('switch-next'), /Activation failed/);
+  assert.deepEqual(h.state.order, [1, 2, 3]);
+  assert.equal(h.calls.filter(c => c.name === 'storage.set').length, 0);
 });

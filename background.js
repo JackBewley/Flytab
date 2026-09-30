@@ -37,8 +37,8 @@ function enqueue(operation) {
     try { await previous; } catch { /* A failed operation must not poison the queue. */ }
     return await operation();
   })();
-  tail = result;
-  void result.catch(error => console.error('Flytab:', error.message));
+  // Keep only completion in the mutex, never the last tab scan or UI snapshot.
+  tail = result.then(() => {}, error => console.error('Flytab:', error.message));
   return result;
 }
 
@@ -195,9 +195,9 @@ async function cancel(state, restore = true) {
   }
 }
 
-async function activate(state, destinationId, sourceId) {
+async function activate(state, destinationId, sourceId, knownDestination) {
   releaseInput(state.session?.token);
-  const destination = await chrome.tabs.get(destinationId);
+  const destination = knownDestination || await chrome.tabs.get(destinationId);
   if (!eligible(destination, ORIGIN)) throw new Error('That tab is no longer available.');
   // Activate before focusing: avoids putting the destination window's old
   // active tab between the chosen destination and source in the MRU list.
@@ -218,13 +218,42 @@ function sourceIn(window) {
     : null;
 }
 
-async function quickSwitch(current, parent) {
-  // Resolve live focus inside the queue, never trust a stale command-event tab.
-  const [data, focused] = await Promise.all([
-    current || read(), parent || chrome.windows.getLastFocused({ populate: true })
+// Only transfer the active tab's metadata when resolving a quick-toggle source.
+// The two live reads may race a focus change; never combine different windows.
+async function focusedSourceWindow() {
+  const [window, tabs] = await Promise.all([
+    chrome.windows.getLastFocused(),
+    chrome.tabs.query({ active: true, lastFocusedWindow: true })
   ]);
-  const { state, tabs } = data;
-  const source = sourceIn(focused) || tabs.find(tab => tab.id === state.session?.sourceId);
+  return { ...window, tabs: tabs.filter(tab => tab.windowId === window.id) };
+}
+
+async function quickSwitch(stored, parent) {
+  // Resolve live focus inside the queue, never trust a stale command-event tab.
+  const [values, focused] = await Promise.all([
+    stored || chrome.storage.session.get([STATE_KEY, TOOLBAR_ERROR_KEY]),
+    parent || focusedSourceWindow()
+  ]);
+  toolbarNeedsReset ||= Boolean(values[TOOLBAR_ERROR_KEY]);
+  const known = values[STATE_KEY];
+  const liveSource = sourceIn(focused);
+  if (known?.version === 1 && !known.session && liveSource) {
+    const id = known.order.find(id => id !== liveSource.id);
+    if (id != null) {
+      let destination;
+      try { destination = await chrome.tabs.get(id); } catch { /* Reconcile below. */ }
+      if (destination && eligible(destination, ORIGIN)) {
+        // A healthy toggle needs two live tabs, not every tab's title and URL.
+        // Reuse the validated destination without a second tabs.get roundtrip.
+        if (known.order[0] !== liveSource.id) known.order = promote(known.order, liveSource.id);
+        return await activate(known, id, liveSource.id, destination);
+      }
+    }
+  }
+  // Missing history, a closed/ineligible destination or an open picker uses
+  // the existing full reconciliation, preserving recovery and preview rules.
+  const { state, tabs } = await read({ stored: values, parent: focused, persist: false });
+  const source = liveSource || tabs.find(tab => tab.id === state.session?.sourceId);
   if (!source) return;
   state.order = promote(state.order, source.id);
   if (state.order.length > 1) {
@@ -241,7 +270,7 @@ async function command(name) {
   if (!['switch-next', 'switch-previous'].includes(name)) return;
   const [stored, parent, useAction] = await Promise.all([
     chrome.storage.session.get([STATE_KEY, TOOLBAR_ERROR_KEY]),
-    chrome.windows.getLastFocused({ populate: true }),
+    name === 'switch-next' ? focusedSourceWindow() : chrome.windows.getLastFocused({ populate: true }),
     name === 'switch-previous' ? canOpenAction() : false
   ]);
   toolbarNeedsReset ||= Boolean(stored[TOOLBAR_ERROR_KEY]);
@@ -278,7 +307,7 @@ async function command(name) {
     return;
   }
   if (name === 'switch-next') {
-    return await quickSwitch(await read({ stored, parent, persist: false }), parent);
+    return await quickSwitch(stored, parent);
   }
   const source = sourceIn(parent);
   if (!source) return;

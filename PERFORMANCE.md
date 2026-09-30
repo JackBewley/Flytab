@@ -2,6 +2,35 @@
 
 The goal is to make the switcher receive keyboard input sooner while keeping the immediate Option+F toggle, frozen preview order, release-to-select behavior, and existing permissions. A release that occurs before Chrome focuses the extension document is still unrecoverable.
 
+## v0.6.4 lower-allocation quick switching
+
+Healthy Option+F and toolbar toggles now query only the current active tab and the previous MRU destination. They reuse the validated destination, avoid building a populated window containing every tab, and avoid copying the MRU array merely to promote an already-current source. Missing history, a stale/ineligible destination, or an open picker retains the full reconciliation path. Browser events still remove closed tabs. Source/destination validation, activation-before-window-focus, durable MRU writes, and popup input ownership remain intact. No new persistent cache, timer, dependency, or permission was added.
+
+The serialized worker queue now retains only completion, rather than the previous operation’s return value. A completed startup scan or popup message can no longer remain reachable solely because it was the last queued operation. This releases those tab/snapshot objects for normal garbage collection; it does not force collection or promise a specific process-memory decrease.
+
+**Native speed:** the Mac was unlocked for these runs. Two opposite-order fresh-profile pairs compare frozen v0.6.3 commit `6e05ad0` with the exact final v0.6.4 runtime, on Chrome for Testing 153.0.8010.12. Both use the pinned action surface and 8/120 visited blank fixtures, plus the browser’s initial/controller tabs. There are 160 measured openings, 320 toggles, and 800 navigation steps across both versions. The benchmark opens real foreground Chrome surfaces and records document focus and authenticated input ownership; command dispatch and subsequent navigation are automated, not physical keyboard/keyup timing or compositor-paint measurements. No 1,000-tab run was performed.
+
+Median milliseconds (v0.6.3 → v0.6.4):
+
+| Visited tabs / worker | Quick toggle | Popup fully ready | Navigate one entry |
+|---|---:|---:|---:|
+| 8 / warm | 5.7 → 5.5 | 32.2 → 32.2 | 0.7 → 0.7 |
+| 8 / worker-restarted | 6.8 → 6.2 | 34.4 → 34.7 | 0.8 → 0.8 |
+| 120 / warm | 8.7 → 7.3 | 42.7 → 39.8 | 1.8 → 1.8 |
+| 120 / worker-restarted | 10.1 → 8.5 | 42.9 → 42.2 | 1.9 → 1.8 |
+
+The quick-toggle median improved about 16% at 120 tabs in both worker modes; the smaller fixture remains comparable. Including controller transport and worker wake, the 120-tab medians changed from 9.5 to 8.4 ms warm and 15.0 to 13.3 ms restarted. Popup opening remains comparable or faster in these runs; its eight-tab restarted median moved by +0.3 ms. This supports no material regression, not an absolute zero-slowdown guarantee. Website loading/painting after activation is outside these timings.
+
+**Allocation pressure:** separate headless diagnostic runs count tab metadata returned by `tabs.query`, `tabs.get`, and `windows.getLastFocused`, with serialization enabled only for those runs. At 120 visited tabs, a healthy toggle read 245 tab records / about 103,024 JSON bytes before, versus 2 records / 847 bytes afterward (about 99.2% less serialized metadata). At eight visited tabs it read 21 records / 8,852 bytes versus 2 / about 835 bytes. These are actual API result volumes, not an estimate of total RAM or JavaScript heap bytes. They exclude session ID arrays, activation-event processing after command completion, and the common tab-update response. Speed results above exclude the profiling runs.
+
+**Idle memory:** the automatic icon still needs the same minimal hidden document. Its previously measured extra physical footprint remains the relevant estimate: about 22–23 MiB, mostly Chrome’s renderer overhead rather than Flytab JavaScript. This revision reduces transient work and retention; it does not claim that 22–23 MiB disappeared or remeasure a lower idle footprint. Repeatedly closing/recreating the appearance document would trade memory for extra process starts and delayed appearance updates. Removing it would require a static/manual icon or another supported browser feature. Chromium’s native `icon_variants` feature is still [disabled by default in the checked source](https://chromium.googlesource.com/chromium/src/+/HEAD/extensions/common/extension_features.cc); that is the most promising future way to remove the resident document without a feature tradeoff. No experimental browser flags are required or enabled by Flytab.
+
+The previously blocked native v0.6.2/v0.6.3 comparison also completed (`native-pretheme.json` against `native-before-1.json`): popup medians were 34.1/34.5/43.6/44.3 ms before automatic icons and 32.2/34.2/41.2/40.5 ms afterward, in 8-warm/8-restarted/120-warm/120-restarted order. It found no native opening regression in that bounded pair; the balanced final comparison above is the evidence for the new quick-toggle optimization.
+
+Verification: 69 unit tests, 18 pinned-action browser checks, and 31 native-fallback browser checks pass. These cover immediate toolbar/command use, source/destination ordering, missing/closed/ineligible tabs, failed activation, worker restart, cross-window focus, unchanged preview/release/cancel behavior, and popup errors. Browser chord checks use injected DOM events; prior physical-keyboard acceptance still applies.
+
+Evidence is under `test-evidence/0.6.4`: `native-{before,after}-{2,3}.json`, `native-comparison.json`, `metadata-{before,after}.json`, `action/action-results.json`, and `native-fallback/results.json`. Preliminary pair 1 is retained but excluded from the final table because a final redundant-array-copy guard was added afterward. For metadata diagnostics use `FLYTAB_PROFILE_METADATA=1`; never use those instrumented timings as performance evidence. All probes stay in temporary test copies and are excluded from the ZIP.
+
 ## v0.6.3 automatic icon: speed and memory
 
 The user authorized an offscreen appearance document and rejected the outlined icon. The clean dark/light PNGs preserve the prior geometry. The document starts at install/update and browser startup; command handlers never create it or wait for it. Icon messages use a separate cosmetic queue. Chrome 153 did not deliver emulated media-query change events in the hidden document, although `.matches` updated correctly. A local five-second fallback reads that boolean and sends a message only after a change or failed application. There is no persistent Port, network traffic, DOM rendering loop, or worker keepalive. Chrome may delay background timers, so this is not an exact five-second update guarantee. Custom toolbar themes may differ from the device preference.

@@ -1,6 +1,6 @@
 # Chrome Web Store Listing — Flytab
 
-Last updated: 2026-09-30. Planning draft based on v0.6.5. The user reports creating a publisher account. Dashboard publisher name observed as jack. The user uploaded the v0.6.5 package and created item nlkhhockmcjjbhochhekpbimkbbdfaei. This task saved the store listing, graphic assets, privacy disclosures and reviewer instructions on 2026-09-30. Contact verification and trader status remain uninspected; no review submission or publication was performed. Remaining recommendations are not approvals.
+Last updated: 2026-09-30. Planning draft based on v0.6.5. The user reports creating a publisher account. Dashboard publisher name observed as jack. The user uploaded the v0.6.5 package and created item nlkhhockmcjjbhochhekpbimkbbdfaei. This task saved the store listing, graphic assets, privacy disclosures and reviewer instructions on 2026-09-30. User reports submitting v0.6.5 for review on 2026-09-30. Contact verification and trader status remain uninspected. Review outcome, automatic/deferred publishing choice and publication have not been verified. Remaining recommendations are not approvals.
 
 ## Readiness and release plan
 
@@ -96,7 +96,7 @@ Technical facts verified from the current source. Saved dashboard classification
 
 Session state is cleared on browser exit or extension reload/disable/removal; worker suspension alone does not clear it. Local processing is still user-data handling for the privacy policy. Do not copy a generic policy saying no browsing information is ever accessed or stored.
 
-Data-use certifications supported by the current code: no sale to third parties; no use beyond tab switching; no use for creditworthiness/lending. These three attestations were saved in the privacy draft on 2026-09-30; the item remains unsubmitted.
+Data-use certifications supported by the current code: no sale to third parties; no use beyond tab switching; no use for creditworthiness/lending. These three attestations were saved in the privacy draft on 2026-09-30; the user subsequently reported submitting the item for review on 2026-09-30.
 
 ## Privacy Policy
 
@@ -113,7 +113,9 @@ Regions: All regions in the existing draft; not changed by this task.
 Pricing: Free of charge in the existing draft; no purchases.
 Store ID: nlkhhockmcjjbhochhekpbimkbbdfaei.
 Dashboard: https://chrome.google.com/u/1/webstore/devconsole/82595efe-7e07-46ea-a645-4ce9b1ea8edc/nlkhhockmcjjbhochhekpbimkbbdfaei/edit/listing
-Public listing: not yet published.
+Review status: submitted on 2026-09-30 per user report; dashboard status and review outcome not independently rechecked.
+Publishing after approval: automatic/deferred choice not confirmed.
+Public listing: publication not yet verified.
 
 ## Developer Info
 
@@ -129,7 +131,7 @@ Required identity/trader declarations: not checked; answer according to the publ
 
 | Version | Date | Changes | Store status |
 |---|---|---|---|
-| 0.6.5 | 2026-09-29 | Refresh icon when visible UI opens; remove continuous appearance watcher. | Uploaded draft package verified in dashboard; listing/privacy/assets/instructions saved. Not submitted for review or published by this task. |
+| 0.6.5 | 2026-09-29 | Refresh icon when visible UI opens; remove continuous appearance watcher. | Uploaded draft package verified in dashboard; listing/privacy/assets/instructions saved. Submitted for review by the user on 2026-09-30; outcome/publication pending verification. |
 
 ## Review Notes
 
@@ -143,7 +145,9 @@ No login or helper app. Tested on macOS. Visit 3+ normal tabs across 2 windows; 
 
 Dashboard now enables Submit for review. This means required dashboard fields are complete; it does not replace the final release checks described above. Support email is present in listing copy; the verified account-level public contact email was not inspected or changed. Optional homepage/support URL and marquee/video were left blank because no appropriate URLs/assets were supplied.
 
-Rejection history: none known; no submission performed.
+Rejection history: none known. First review submission reported by the user on 2026-09-30.
+
+After approval/publication, install the store-distributed release in a clean Chrome profile and verify the default shortcuts, pinned toolbar toggle, held-modifier switching and cross-window focus. Reported submission does not establish approval, publication or completion of the deferred final release checks.
 
 ## Official references checked
 

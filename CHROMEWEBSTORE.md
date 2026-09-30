@@ -1,6 +1,6 @@
 # Chrome Web Store Listing — Flytab
 
-Last updated: 2026-09-29. Planning draft based on v0.6.5, commit 0db1d3d. No dashboard item, account registration, upload or submission has been performed for this plan. Owner choices below remain undecided; recommendations are not approvals.
+Last updated: 2026-09-30. Planning draft based on v0.6.5. The user reports creating a publisher account. Exact public publisher name, contact verification and trader status remain unconfirmed. No dashboard item, upload or submission has been performed by this task. Remaining recommendations are not approvals.
 
 ## Readiness and release plan
 
@@ -9,8 +9,8 @@ Flytab is a working Manifest V3 extension with no runtime dependencies, external
 1. Choose the publishing identity/account, support contact, policy hosting, price, supported platforms and launch visibility.
 2. Prepare listing copy, a store icon, promotional tile, screenshots, a public privacy policy and reviewer instructions.
 3. Finish the release checks and decide whether to label the public release 1.0.0. That version number is a recommendation, not a store requirement.
-4. Add a dedicated store packaging target and validate it. The existing ZIP has a Flytab/ wrapper; the store requires manifest.json at the ZIP root. Exclude development materials and internal README/TESTING/PERFORMANCE/store-planning documentation from the store artifact. Preserve the current user-download bundle as a separate output if useful.
-5. Register/configure the chosen developer account: one-time registration fee, two-step verification, publisher name, verified contact email and any required identity/trader details in the current dashboard. The account's status has not been checked.
+4. Store packaging is prepared: run `python3 scripts/package.py --store` to generate `dist/Flytab-0.6.5-store.zip`. It has manifest.json at the root and excludes internal documentation. The existing download bundle remains separate. Archive integrity and byte equality to the source are checked during packaging; final release testing remains outstanding.
+5. Publisher account creation is reported complete by the user. Confirm two-step verification, publisher name, verified contact email and any outstanding identity/trader requirements in the dashboard; these details have not been inspected.
 6. Upload the store ZIP, complete listing/privacy/distribution/test fields and submit for review. Recommendation: unlisted pilot, then public visibility on the same listing. All visibility modes require review; only Public provides normal store discovery. Deferred publishing can separate approval from launch.
 
 Google says most reviews take a few days, but some take a few weeks. Account verification or a requested correction can add time. Approval and store ranking are not guaranteed.
@@ -116,7 +116,7 @@ Owning developer Google account: pending.
 Verified public contact email: pending.
 Support URL/email: pending.
 Homepage/policy hosting: pending.
-Developer registration and two-step verification: not checked.
+Developer registration: complete per user report on 2026-09-30. Two-step verification and remaining account setup: not checked.
 Required identity/trader declarations: not checked; answer according to the publisher's actual circumstances.
 
 ## Version History

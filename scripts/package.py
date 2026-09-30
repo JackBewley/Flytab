@@ -1,9 +1,14 @@
 """Build a deterministic runtime-only ZIP; no third-party Python modules."""
 from pathlib import Path
+import argparse
 import hashlib
 import json
 import struct
 import zipfile
+
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument('--store', action='store_true', help='Create a Chrome Web Store upload ZIP with manifest.json at its root')
+args = parser.parse_args()
 
 root = Path(__file__).resolve().parent.parent
 manifest = json.loads((root / 'manifest.json').read_text())
@@ -23,6 +28,11 @@ files = [
     'icons/icon-dark-16.png', 'icons/icon-dark-32.png', 'icons/icon-dark-48.png', 'icons/icon-dark-128.png',
     'README.md', 'TESTING.md', 'PERFORMANCE.md',
 ]
+if args.store:
+    files = [name for name in files if name not in {'README.md', 'TESTING.md', 'PERFORMANCE.md'}]
+prefix = '' if args.store else 'Flytab/'
+suffix = '-store' if args.store else ''
+
 for size, name in manifest['icons'].items():
     assert name in files
     data = (root / name).read_bytes()
@@ -38,19 +48,19 @@ for name in manifest['action']['default_icon'].values():
     assert name in files
 assert manifest['background']['service_worker'] in files
 assert manifest['options_ui']['page'] in files
-output = root / 'dist' / f"Flytab-{manifest['version']}.zip"
+output = root / 'dist' / f"Flytab-{manifest['version']}{suffix}.zip"
 output.parent.mkdir(exist_ok=True)
 with zipfile.ZipFile(output, 'w', compression=zipfile.ZIP_DEFLATED) as archive:
     for name in files:
         data = (root / name).read_bytes()
-        info = zipfile.ZipInfo('Flytab/' + name, date_time=(2000, 1, 1, 0, 0, 0))
+        info = zipfile.ZipInfo(prefix + name, date_time=(2000, 1, 1, 0, 0, 0))
         info.compress_type = zipfile.ZIP_DEFLATED
         info.external_attr = 0o100644 << 16
         archive.writestr(info, data)
 with zipfile.ZipFile(output) as archive:
     assert archive.testzip() is None
-    assert set(archive.namelist()) == {'Flytab/' + name for name in files}
+    assert set(archive.namelist()) == {prefix + name for name in files}
     for name in files:
-        assert archive.read('Flytab/' + name) == (root / name).read_bytes()
+        assert archive.read(prefix + name) == (root / name).read_bytes()
 print(f'{output}: {len(files)} verified files, {output.stat().st_size} bytes')
 print('SHA-256:', hashlib.sha256(output.read_bytes()).hexdigest())

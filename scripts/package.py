@@ -20,7 +20,7 @@ assert not manifest.get('host_permissions') and not manifest.get('content_script
 assert manifest['incognito'] == 'not_allowed'
 assert "connect-src 'none'" in manifest['content_security_policy']['extension_pages']
 files = [
-    'manifest.json', 'background.js', 'core.js', 'early-input.js',
+    'LICENSE', 'manifest.json', 'background.js', 'core.js', 'early-input.js',
     'popup.html', 'popup.js', 'popup.css', 'tab.svg',
     'options.html', 'options.css', 'options.js', 'theme.js',
     'icons/icon.svg', 'icons/icon-16.png', 'icons/icon-32.png',

@@ -77,3 +77,7 @@ Chrome controls the outer extension-popup frame and does not expose its corner s
 API references: [Commands](https://developer.chrome.com/docs/extensions/reference/api/commands), [Tabs / lastAccessed](https://developer.chrome.com/docs/extensions/reference/api/tabs), [Windows](https://developer.chrome.com/docs/extensions/reference/api/windows), [cached favicons](https://developer.chrome.com/docs/extensions/how-to/ui/favicons).
 
 The icon source is `icons/icon.svg`. Chrome uses the bundled 16/32/48/128px PNGs. To regenerate them for development, run `python3 scripts/render-icons.py` with Pillow installed; the extension needs no image-rendering dependency.
+
+## License
+
+[MIT](LICENSE). Copyright (c) 2026 Jack Bewley.

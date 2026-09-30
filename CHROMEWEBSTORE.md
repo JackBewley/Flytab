@@ -24,7 +24,7 @@ Google says most reviews take a few days, but some take a few weeks. Account ver
 | Price | Recommend free for the initial release. No payment/licensing flow exists. |
 | Platform support | Recommend macOS-focused launch with explicit tested support; validate Windows/Linux before making broader claims. Resolve the minimum-Chrome compatibility claim. |
 | Visibility | Recommend a short unlisted pilot followed by Public, which is needed for search/discovery. |
-| Contact and policy hosting | User to provide a monitored public support email and choose a stable public policy URL, e.g. a page on the publisher's website. A compact support/privacy page is sufficient. |
+| Contact and policy hosting | Support email confirmed: support@creativemethod.com. GitLab repository or public personal snippet hosting proposed; exact public URL remains pending. A private project snippet cannot provide public access. |
 | Regions and primary language | English is implemented. Recommend broad distribution after completing applicable account/trader declarations. Region selection remains unconfirmed. |
 
 Open-source licensing is a separate, optional decision; it is not necessary to publish the existing extension.
@@ -55,7 +55,7 @@ Your recent-tab order stays on your device. Flytab has no analytics, account or 
 
 The visual shortcut is designed to be held while choosing. If you release it before Chrome focuses the list, Enter or a click selects the highlighted entry. Use Option+F for an immediate previous-tab tap. Incognito tabs are excluded. The toolbar icon refreshes its light/dark appearance when the list or settings opens.
 
-Support contact: pending owner-provided address/URL; insert before submission.
+Support contact: support@creativemethod.com (provided by user).
 
 ## Graphics & Assets
 
@@ -98,9 +98,9 @@ Data-use certifications supported by the current code: no sale to third parties;
 
 ## Privacy Policy
 
-Public URL: pending hosting decision.
+Public URL: pending. User proposed GitLab hosting. Recommend a public personal snippet if the project repository is private; verify access without signing in before submission.
 
-Policy work remaining: identify the publisher/contact, explain local metadata and temporary recent-tab order, retention/deletion, absence of transmission/sale/analytics, and how future policy changes will be communicated. Keep the policy and dashboard disclosures consistent. If a future support website has separate analytics or collects support messages, describe that separately from the extension's behavior.
+Policy text prepared in PRIVACY.md from current source, with the confirmed support contact. It covers on-device metadata access and temporary recent order, retention/deletion, no extension transmission/sale/analytics, support emails, hosting and policy changes. Publish to the chosen public location and verify the URL before submission. Keep the policy and dashboard disclosures consistent.
 
 ## Distribution
 
@@ -114,8 +114,8 @@ Store ID and listing URL: not created/known.
 Publisher name: pending.
 Owning developer Google account: pending.
 Verified public contact email: pending.
-Support URL/email: pending.
-Homepage/policy hosting: pending.
+Support URL/email: support@creativemethod.com (confirmed by user).
+Homepage/policy hosting: GitLab proposed; public URL pending.
 Developer registration: complete per user report on 2026-09-30. Two-step verification and remaining account setup: not checked.
 Required identity/trader declarations: not checked; answer according to the publisher's actual circumstances.
 

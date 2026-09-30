@@ -1,0 +1,36 @@
+{
+  "version": "0.6.5",
+  "browser": "153.0.8010.12",
+  "source": "Real extension documents captured in disposable Chrome profile. Production opening routine exposed only in temporary copy; no UI rewriting.",
+  "rows": [
+    {
+      "title": "Project notes",
+      "meta": "Current tab",
+      "selected": "false"
+    },
+    {
+      "title": "Inbox — Mail",
+      "meta": "Other window",
+      "selected": "true"
+    },
+    {
+      "title": "Calendar — This week",
+      "meta": "Current window",
+      "selected": "false"
+    },
+    {
+      "title": "Design references",
+      "meta": "Current window",
+      "selected": "false"
+    },
+    {
+      "title": "Website brief",
+      "meta": "Current window",
+      "selected": "false"
+    }
+  ],
+  "shortcuts": [
+    "⌥F",
+    "⌥⇧F"
+  ]
+}

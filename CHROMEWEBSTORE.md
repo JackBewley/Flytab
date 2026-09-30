@@ -62,13 +62,13 @@ Support contact: support@creativemethod.com (provided by user).
 | Asset | Dimensions | Status | File / plan |
 |---|---|---|---|
 | Store icon | 128×128 PNG | Existing PNG; store presentation needs review | icons/icon-128.png; preserve the approved mark, assess store padding and contrast independently of the toolbar sizes. |
-| Screenshot 1 | Plan 1280×800 | Not prepared for store | Show the actual pinned switcher in Chrome with safe demonstration tab titles; explain previous-tab selection. |
-| Screenshot 2 | Plan 1280×800 | Not prepared for store | Show cross-window switching and the quick-toggle shortcut. |
-| Screenshot 3 | Plan 1280×800 | Optional | Show dark appearance or shortcut settings. |
-| Small promotional tile | 440×280 | Required; not created | Flytab mark and restrained product branding. |
+| Screenshot 1 | 1280×800 | Prepared; not uploaded | store/assets/01-previous-tab.png — quick-toggle message and real shortcut settings. |
+| Screenshot 2 | 1280×800 | Prepared; not uploaded | store/assets/02-recent-tabs.png — actual toolbar switcher with safe demonstration tab titles and cross-window previous selection. |
+| Screenshot 3 | 1280×800 | Prepared; not uploaded | store/assets/03-dark-switcher.png — actual dark switcher. |
+| Small promotional tile | 440×280 | Prepared; not uploaded | store/assets/promo-440x280.png — approved mark and Flytab name on slate blue. |
 | Marquee promotional tile | 1400×560 | Optional; not created | Not required for initial submission. |
 
-Current Google guidance requires an icon, at least one screenshot and the small promotional tile. The skill's older template labels the small tile optional; use the current official requirement. Existing test captures establish UI evidence but are not finished listing assets. Store assets must show the shipped UI and contain no private browsing data. Avoid unsupported superlatives and claims of Google affiliation.
+Current Google guidance requires an icon, at least one screenshot and the small promotional tile. The skill's older template labels the small tile optional; use the current official requirement. Store assets are now prepared from real extension captures; see store/README.md and store/captures/provenance.json. Image dimensions and PNG validity were checked, and full-size and half-size previews were visually reviewed. Store assets must show the shipped UI and contain no private browsing data. Avoid unsupported superlatives and claims of Google affiliation.
 
 ## Permissions Justification
 

@@ -24,7 +24,7 @@ Google says most reviews take a few days, but some take a few weeks. Account ver
 | Price | Recommend free for the initial release. No payment/licensing flow exists. |
 | Platform support | Recommend macOS-focused launch with explicit tested support; validate Windows/Linux before making broader claims. Resolve the minimum-Chrome compatibility claim. |
 | Visibility | Recommend a short unlisted pilot followed by Public, which is needed for search/discovery. |
-| Contact and policy hosting | Support email confirmed: support@creativemethod.com. GitLab repository or public personal snippet hosting proposed; exact public URL remains pending. A private project snippet cannot provide public access. |
+| Contact and policy hosting | Support email confirmed: support@creativemethod.com. Policy hosted at https://gitlab.com/-/snippets/6063775; public access and policy text verified without authentication on 2026-09-30. |
 | Regions and primary language | English is implemented. Recommend broad distribution after completing applicable account/trader declarations. Region selection remains unconfirmed. |
 
 Open-source licensing is a separate, optional decision; it is not necessary to publish the existing extension.
@@ -98,9 +98,11 @@ Data-use certifications supported by the current code: no sale to third parties;
 
 ## Privacy Policy
 
-Public URL: pending. User proposed GitLab hosting. Recommend a public personal snippet if the project repository is private; verify access without signing in before submission.
+Public URL: https://gitlab.com/-/snippets/6063775
 
-Policy text prepared in PRIVACY.md from current source, with the confirmed support contact. It covers on-device metadata access and temporary recent order, retention/deletion, no extension transmission/sale/analytics, support emails, hosting and policy changes. Publish to the chosen public location and verify the URL before submission. Keep the policy and dashboard disclosures consistent.
+Verified on 2026-09-30: the snippet page and public raw endpoint are accessible without authentication. Published text matches PRIVACY.md (ignoring surrounding whitespace).
+
+Policy text prepared in PRIVACY.md from current source, with the confirmed support contact. It covers on-device metadata access and temporary recent order, retention/deletion, no extension transmission/sale/analytics, support emails, hosting and policy changes. Published by the user to the public GitLab snippet above; recheck access before submission. Keep the policy and dashboard disclosures consistent.
 
 ## Distribution
 
@@ -115,7 +117,7 @@ Publisher name: pending.
 Owning developer Google account: pending.
 Verified public contact email: pending.
 Support URL/email: support@creativemethod.com (confirmed by user).
-Homepage/policy hosting: GitLab proposed; public URL pending.
+Privacy policy hosting: https://gitlab.com/-/snippets/6063775 (public access verified). Homepage: not specified.
 Developer registration: complete per user report on 2026-09-30. Two-step verification and remaining account setup: not checked.
 Required identity/trader declarations: not checked; answer according to the publisher's actual circumstances.
 

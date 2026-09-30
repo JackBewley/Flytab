@@ -47,7 +47,7 @@ One flat list within Chrome’s toolbar bubble or the fallback native OS frame. 
 
 ## Shapes
 
-7px rounded selected rows; 16px favicons keep native proportions. Rows have 12px horizontal padding and a 12px icon/text gap; title text begins 48px from the popup edge. The scrollbar uses #b8b8c0 in light mode and #6c6c75 in dark mode over a transparent track. Default arrow cursor follows native desktop menu conventions. The Flytab mark is a left arrow inside a horizontal 22×19 tab-window outline on a 24-unit canvas, with a minimal two-tab strip. A 1.8-unit stroke and nearly full-width frame give the whole icon more presence at toolbar size. The arrowhead is 6 units tall; the shallower tab strip leaves clear space above and below it. `icons/icon.svg` is the editable source; Chrome uses PNGs rendered at 16, 32, 48 and 128 pixels. Toolbar PNGs use charcoal gray (#444746) on transparency, selected for the user's light Chrome toolbar. Branding stays in the toolbar; the popup has no logo or decorative selection chevrons.
+7px rounded selected rows; 16px favicons keep native proportions. Rows have 12px horizontal padding and a 12px icon/text gap; title text begins 48px from the popup edge. The scrollbar uses #b8b8c0 in light mode and #6c6c75 in dark mode over a transparent track. Default arrow cursor follows native desktop menu conventions. The Flytab mark is a left arrow inside a horizontal 22×19 tab-window outline on a 24-unit canvas, with a minimal two-tab strip. A 1.8-unit stroke and nearly full-width frame give the whole icon more presence at toolbar size. The arrowhead is 6 units tall; the shallower tab strip leaves clear space above and below it. `icons/icon.svg` is the editable source; Chrome uses PNGs rendered at 16, 32, 48 and 128 pixels. Toolbar PNGs use the existing charcoal stroke (#444746, 1.8 units) over a light keyline (#e8eaed, 3 units). One static image remains visible on light and dark toolbars without background theme work; it does not automatically recolor to match custom themes. Branding stays in the toolbar; the popup has no logo or decorative selection chevrons.
 
 ## Components
 
@@ -65,3 +65,7 @@ Loading reserves five rows. Empty state explains that another tab must be visite
 - Preserve selection order until commit; never activate on hover or arrow navigation.
 - Do not add remote imagery, fonts, or analytics.
 - Keep the primary toggle immediate. In the list, wait for all modifier keys to be released before committing; never guess release with a timer.
+
+## Settings
+
+Options opens a dedicated tab, using popup.css as the shared color and system-font token source plus scoped settings layout in options.css. A 560px maximum-width column shows the two current shortcut assignments, their purposes, and one button to open Chrome’s shortcut editor. Native buttons retain visible focus, keyboard codes are read-only, unassigned shortcuts are explicit, and failures offer retry or a manual Chrome destination. The page refreshes on return and follows light/dark preferences. It adds no code to the switcher loading path.

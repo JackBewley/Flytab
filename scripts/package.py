@@ -17,6 +17,7 @@ assert "connect-src 'none'" in manifest['content_security_policy']['extension_pa
 files = [
     'manifest.json', 'background.js', 'core.js', 'early-input.js',
     'popup.html', 'popup.js', 'popup.css', 'tab.svg',
+    'options.html', 'options.css', 'options.js',
     'icons/icon.svg', 'icons/icon-16.png', 'icons/icon-32.png',
     'icons/icon-48.png', 'icons/icon-128.png',
     'README.md', 'TESTING.md', 'PERFORMANCE.md',
@@ -29,6 +30,7 @@ for size, name in manifest['icons'].items():
 for name in manifest['action']['default_icon'].values():
     assert name in files
 assert manifest['background']['service_worker'] in files
+assert manifest['options_ui']['page'] in files
 output = root / 'dist' / f"Flytab-{manifest['version']}.zip"
 output.parent.mkdir(exist_ok=True)
 with zipfile.ZipFile(output, 'w', compression=zipfile.ZIP_DEFLATED) as archive:

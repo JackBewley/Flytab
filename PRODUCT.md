@@ -31,3 +31,5 @@ Plain JavaScript modules, HTML and CSS. No runtime dependencies or build step; c
 ## Evidence
 
 The user's requirements in this task are authoritative. Browser verification and limitations are recorded in TESTING.md.
+
+Settings is available through the toolbar context menu’s Options entry. It displays Chrome’s assigned shortcuts and opens Chrome’s editor; it adds no alternate key-binding system. The toolbar icon uses a static light keyline around the dark geometry for both toolbar themes, as requested, with no background theme detection.

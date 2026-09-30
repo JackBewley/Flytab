@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Flytab settings</title>
+  <link rel="stylesheet" href="popup.css">
+  <link rel="stylesheet" href="options.css">
+  <script src="options.js" type="module"></script>
+</head>
+<body>
+  <main class="settings">
+    <header class="settings-heading">
+      <img src="icons/icon-48.png" width="32" height="32" alt="">
+      <div><h1>Flytab</h1><p>Settings</p></div>
+    </header>
+    <section aria-labelledby="shortcuts-heading">
+      <h2 id="shortcuts-heading">Keyboard shortcuts</h2>
+      <dl class="shortcuts">
+        <div><dt>Switch to previous tab</dt><dd><kbd id="quick-shortcut">Loading…</kbd></dd><dd class="description">Jump straight back, without opening the list.</dd></div>
+        <div><dt>Open recent tabs</dt><dd><kbd id="list-shortcut">Loading…</kbd></dd><dd class="description">Hold your shortcut’s modifiers and repeat its key to browse. Release the modifiers to switch.</dd></div>
+      </dl>
+      <button id="edit-shortcuts" type="button">Change shortcuts in Chrome <span aria-hidden="true">↗</span></button>
+      <p class="note">Find Flytab on the shortcuts page and keep the scope set to “In Chrome.” Your assignments update here when you return.</p>
+      <p id="shortcut-error" role="alert" hidden></p>
+      <button id="retry-shortcuts" class="secondary" type="button" hidden>Retry</button>
+    </section>
+    <footer>The toolbar button always switches straight to your previous tab.</footer>
+  </main>
+</body>
+</html>

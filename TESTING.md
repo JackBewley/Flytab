@@ -1,5 +1,11 @@
 # Flytab verification
 
+## v0.6.2 settings and icon check
+
+All 60 unit checks and 6 focused settings checks passed. The settings suite loads the real extension in headless Chrome 153, compares displayed assignments with commands.getAll, and opens the real Chrome shortcut editor. Controlled page-only mocks cover returning after a remap, unassigned commands, failed reads/retry, and failed editor launch. Light/dark screenshots and narrow layouts were checked; the static icon was visually compared on white and dark-gray backgrounds. Background, early-input, popup JavaScript and popup CSS are unchanged from v0.6.1, so settings introduce no work into their paths. No performance benchmark or full native chord suite was run.
+
+Run `npm run test:options` for the small settings suite. Evidence is in `test-evidence/0.6.2`. The strict UI scanner reports two actionless-button findings: reviewed false positives because it only recognizes inline handlers, which extension CSP disallows. Both buttons use external options.js listeners, verified by real-browser interaction/recovery tests. No inline handlers were added to appease the scanner.
+
 ## v0.6.1 focused UI check
 
 Current tab now stays in the first row, with the previous tab initially selected in the second row; a single-tab list selects its only row. Titles are 13px. All 60 unit checks and 8 real-Chromium DOM/layout checks passed, including initial current/selected placement, enlarged text, navigation, and error recovery. The initial popup screenshot was inspected. The strict UI audit is clean. The small native action suite could not establish its fixture MRU on Chrome 153 (two attempts) or Chrome 151 (one attempt): history contained only the initial tab before Flytab opened. Those runs do not validate native interaction for this revision. No large-history benchmarks or full browser suite were run, per the user’s requested scope. Reload and review the small UI change before the later full test pass.
@@ -80,11 +86,11 @@ npm run browser:install
 npm run test:all
 ```
 
-The lockfile pins Playwright Core 1.63.0; `browser:install` installs its Chrome for Testing 153.0.8010.12 (revision 1243). `test:all` runs unit, native-window, pinned-action, and popup DOM/recovery checks sequentially. Use `CHROME_PATH` to test another explicit Chrome for Testing or Chromium executable; record that version with the results. Set `FLYTAB_EVIDENCE` for screenshots/results; `PLAYWRIGHT_MODULE` can point to an existing Playwright Core module. The harnesses copy runtime files, add private hooks to that copy, and remove their temporary copy/profile afterward. The action suite pins only its disposable extension. Flytab has no Node, npm, or Playwright runtime dependency. Packaging uses Python 3’s standard library: `npm run package` validates permissions, icon sizes, matching versions, a fixed 16-file allowlist, and archive contents. Repeating it on unchanged sources produces the same ZIP.
+The lockfile pins Playwright Core 1.63.0; `browser:install` installs its Chrome for Testing 153.0.8010.12 (revision 1243). `test:all` runs unit, native-window, pinned-action, popup DOM/recovery, and settings checks sequentially. Use `CHROME_PATH` to test another explicit Chrome for Testing or Chromium executable; record that version with the results. Set `FLYTAB_EVIDENCE` for screenshots/results; `PLAYWRIGHT_MODULE` can point to an existing Playwright Core module. The harnesses copy runtime files, add private hooks to that copy, and remove their temporary copy/profile afterward. The action suite pins only its disposable extension. Flytab has no Node, npm, or Playwright runtime dependency. Packaging uses Python 3’s standard library: `npm run package` validates permissions, icon sizes, matching versions, a fixed 19-file allowlist, and archive contents. Repeating it on unchanged sources produces the same ZIP.
 
 ## Manual check
 
-1. Reload Flytab and verify version **0.6.1**. Pin its icon. Confirm Option+F is **Switch to previous tab** and Option+Shift+F is **Open recent tabs** in `chrome://extensions/shortcuts`.
+1. Reload Flytab and verify version **0.6.2**. Pin its icon. Confirm Option+F is **Switch to previous tab** and Option+Shift+F is **Open recent tabs** in `chrome://extensions/shortcuts`.
 2. Visit tabs in two windows, then quickly tap Option+F several times. Your two most recent tabs should alternate immediately without a popup. Repeat after the extension has been idle.
 3. Hold Option+Shift and tap F. The list should open beneath the pinned icon. Keep BOTH modifiers held and tap F several more times. Every tap must move forward; releasing F between taps must leave the list open. Keep cycling to check wrapping.
 4. Release Shift while keeping Option held: it should stay open. Release Option: the highlighted tab should activate and the list close. Repeat with Option released first, then Shift. Test left/right Option and Shift keys.

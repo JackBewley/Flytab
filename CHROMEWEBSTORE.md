@@ -1,6 +1,6 @@
 # Chrome Web Store Listing — Flytab
 
-Last updated: 2026-09-30. Planning draft based on v0.6.5. The user reports creating a publisher account. Exact public publisher name, contact verification and trader status remain unconfirmed. No dashboard item, upload or submission has been performed by this task. Remaining recommendations are not approvals.
+Last updated: 2026-09-30. Planning draft based on v0.6.5. The user reports creating a publisher account. Dashboard publisher name observed as jack. The user uploaded the v0.6.5 package and created item nlkhhockmcjjbhochhekpbimkbbdfaei. This task saved the store listing, graphic assets, privacy disclosures and reviewer instructions on 2026-09-30. Contact verification and trader status remain uninspected; no review submission or publication was performed. Remaining recommendations are not approvals.
 
 ## Readiness and release plan
 
@@ -19,13 +19,13 @@ Google says most reviews take a few days, but some take a few weeks. Account ver
 
 | Decision | Recommendation / remaining input |
 |---|---|
-| Publishing identity and owning Google account | User to choose personal or Creative Method ownership, exact publisher name and account. |
+| Publishing identity and owning Google account | Dashboard publisher is jack; signed-in account is Jack Bewley. Exact legal/trader identity was not inspected or changed. |
 | Name and positioning | Keep Flytab; describe its purpose clearly as returning to the previous tab across windows. Review final listing wording before upload. |
 | Price | Recommend free for the initial release. No payment/licensing flow exists. |
 | Platform support | Recommend macOS-focused launch with explicit tested support; validate Windows/Linux before making broader claims. Resolve the minimum-Chrome compatibility claim. |
-| Visibility | Recommend a short unlisted pilot followed by Public, which is needed for search/discovery. |
+| Visibility | Existing dashboard draft is Public; not changed by this task. Unlisted pilot remains an alternative before submission. |
 | Contact and policy hosting | Support email confirmed: support@creativemethod.com. Policy hosted at https://gitlab.com/-/snippets/6063775; public access and policy text verified without authentication on 2026-09-30. |
-| Regions and primary language | English is implemented. Recommend broad distribution after completing applicable account/trader declarations. Region selection remains unconfirmed. |
+| Regions and primary language | Dashboard listing is English and distribution currently selects All regions; these are draft settings, not a publication. |
 
 Open-source licensing is a separate, optional decision; it is not necessary to publish the existing extension.
 
@@ -39,9 +39,9 @@ Single purpose: Switch between recently used open Chrome tabs across browser win
 
 Primary language: English.
 
-Category: Choose the closest current productivity/workflow category in the live dashboard; older templates use category names that may differ.
+Category: Tools (selected and saved in the dashboard).
 
-Detailed description — draft, pending support details and final platform scope:
+Detailed description — saved to the dashboard on 2026-09-30:
 
 Flytab takes you straight back to the Chrome tab you were just using, even when it is in another window.
 
@@ -55,17 +55,19 @@ Your recent-tab order stays on your device. Flytab has no analytics, account or 
 
 The visual shortcut is designed to be held while choosing. If you release it before Chrome focuses the list, Enter or a click selects the highlighted entry. Use Option+F for an immediate previous-tab tap. Incognito tabs are excluded. The toolbar icon refreshes its light/dark appearance when the list or settings opens.
 
-Support contact: support@creativemethod.com (provided by user).
+Designed and tested on macOS.
+
+Support: support@creativemethod.com
 
 ## Graphics & Assets
 
 | Asset | Dimensions | Status | File / plan |
 |---|---|---|---|
-| Store icon | 128×128 PNG | Existing PNG; store presentation needs review | icons/icon-128.png; preserve the approved mark, assess store padding and contrast independently of the toolbar sizes. |
-| Screenshot 1 | 1280×800 | Prepared; not uploaded | store/assets/01-previous-tab.png — quick-toggle message and real shortcut settings. |
-| Screenshot 2 | 1280×800 | Prepared; not uploaded | store/assets/02-recent-tabs.png — actual toolbar switcher with safe demonstration tab titles and cross-window previous selection. |
-| Screenshot 3 | 1280×800 | Prepared; not uploaded | store/assets/03-dark-switcher.png — actual dark switcher. |
-| Small promotional tile | 440×280 | Prepared; not uploaded | store/assets/promo-440x280.png — approved mark and Flytab name on slate blue. |
+| Store icon | 128×128 PNG | Uploaded and saved 2026-09-30 | icons/icon-128.png; preserve the approved mark, assess store padding and contrast independently of the toolbar sizes. |
+| Screenshot 1 | 1280×800 | Uploaded and saved 2026-09-30 | store/assets/01-previous-tab.png — quick-toggle message and real shortcut settings. |
+| Screenshot 2 | 1280×800 | Uploaded and saved 2026-09-30 | store/assets/02-recent-tabs.png — actual toolbar switcher with safe demonstration tab titles and cross-window previous selection. |
+| Screenshot 3 | 1280×800 | Uploaded and saved 2026-09-30 | store/assets/03-dark-switcher.png — actual dark switcher. |
+| Small promotional tile | 440×280 | Uploaded and saved 2026-09-30 | store/assets/promo-440x280.png — approved mark and Flytab name on slate blue. |
 | Marquee promotional tile | 1400×560 | Optional; not created | Not required for initial submission. |
 
 Current Google guidance requires an icon, at least one screenshot and the small promotional tile. The skill's older template labels the small tile optional; use the current official requirement. Store assets are now prepared from real extension captures; see store/README.md and store/captures/provenance.json. Image dimensions and PNG validity were checked, and full-size and half-size previews were visually reviewed. Store assets must show the shipped UI and contain no private browsing data. Avoid unsupported superlatives and claims of Google affiliation.
@@ -82,7 +84,7 @@ No host permissions or content scripts. No offscreen permission. No remote code:
 
 ## Privacy & Data Use
 
-Technical facts verified from the current source; final dashboard classifications must be matched to the live form's definitions before submission.
+Technical facts verified from the current source. Saved dashboard classifications: Web history selected for local open-tab URLs/titles/timing; other data categories not selected. Google's current FAQ explicitly requires disclosure of locally processed data. No remote code selected. The three limited-use certifications were completed based on the verified no-sale, no-unrelated-use and no-credit/lending behavior.
 
 | Information | Local handling | Off-device transmission / sharing |
 |---|---|---|
@@ -94,7 +96,7 @@ Technical facts verified from the current source; final dashboard classification
 
 Session state is cleared on browser exit or extension reload/disable/removal; worker suspension alone does not clear it. Local processing is still user-data handling for the privacy policy. Do not copy a generic policy saying no browsing information is ever accessed or stored.
 
-Data-use certifications supported by the current code: no sale to third parties; no use beyond tab switching; no use for creditworthiness/lending. Complete the dashboard's actual attestations only during the authorized submission process.
+Data-use certifications supported by the current code: no sale to third parties; no use beyond tab switching; no use for creditworthiness/lending. These three attestations were saved in the privacy draft on 2026-09-30; the item remains unsubmitted.
 
 ## Privacy Policy
 
@@ -106,15 +108,17 @@ Policy text prepared in PRIVACY.md from current source, with the confirmed suppo
 
 ## Distribution
 
-Visibility: undecided; recommended Unlisted pilot → Public.
-Regions: undecided; recommended broad distribution subject to accurate required account declarations.
-Pricing: undecided; recommended Free initially.
-Store ID and listing URL: not created/known.
+Visibility: Public in the existing draft; not changed by this task.
+Regions: All regions in the existing draft; not changed by this task.
+Pricing: Free of charge in the existing draft; no purchases.
+Store ID: nlkhhockmcjjbhochhekpbimkbbdfaei.
+Dashboard: https://chrome.google.com/u/1/webstore/devconsole/82595efe-7e07-46ea-a645-4ce9b1ea8edc/nlkhhockmcjjbhochhekpbimkbbdfaei/edit/listing
+Public listing: not yet published.
 
 ## Developer Info
 
-Publisher name: pending.
-Owning developer Google account: pending.
+Publisher name: jack (observed in dashboard).
+Owning developer Google account: Jack Bewley account observed signed in; account/legal ownership not independently verified.
 Verified public contact email: pending.
 Support URL/email: support@creativemethod.com (confirmed by user).
 Privacy policy hosting: https://gitlab.com/-/snippets/6063775 (public access verified). Homepage: not specified.
@@ -125,13 +129,19 @@ Required identity/trader declarations: not checked; answer according to the publ
 
 | Version | Date | Changes | Store status |
 |---|---|---|---|
-| 0.6.5 | 2026-09-29 | Refresh icon when visible UI opens; remove continuous appearance watcher. | Local development release; not submitted by this task. |
+| 0.6.5 | 2026-09-29 | Refresh icon when visible UI opens; remove continuous appearance watcher. | Uploaded draft package verified in dashboard; listing/privacy/assets/instructions saved. Not submitted for review or published by this task. |
 
 ## Review Notes
 
 Testing instructions to include: open at least three ordinary tabs across two Chrome windows and visit each; pin Flytab; confirm/assign shortcuts; use Option+F twice to toggle; hold Option+Shift+F, repeat F, release both to commit across windows; test Escape and a row click. Settings opens from the toolbar context menu. No credentials, account or helper app is required. Review the unpinned fallback as well.
 
 Known limitations: macOS-first evidence; Chrome 121 compatibility unverified; extremely fast full release before focus cannot be recovered; unpinned/unsupported action popups use a separate window; toolbar appearance may be stale between openings; custom browser themes can differ from system light/dark preference; incognito excluded. Switching support is within Chrome, not a system-wide hotkey.
+
+Saved reviewer instructions (476/500 characters):
+
+No login or helper app. Tested on macOS. Visit 3+ normal tabs across 2 windows; pin Flytab. Confirm shortcuts in Options (scope: In Chrome). Option+F twice toggles the previous tab; toolbar click also toggles. Hold Option+Shift, press F, keep both held and repeat F to browse; release both to switch. Current tab is first; previous starts selected. Esc cancels; Enter/click commits. A release before popup focus may need Enter. Incognito excluded. Also test unpinned fallback.
+
+Dashboard now enables Submit for review. This means required dashboard fields are complete; it does not replace the final release checks described above. Support email is present in listing copy; the verified account-level public contact email was not inspected or changed. Optional homepage/support URL and marquee/video were left blank because no appropriate URLs/assets were supplied.
 
 Rejection history: none known; no submission performed.
 
@@ -147,3 +157,5 @@ Rejection history: none known; no submission performed.
 - [Distribution](https://developer.chrome.com/docs/webstore/cws-dashboard-distribution)
 - [Submission and deferred publishing](https://developer.chrome.com/docs/webstore/publish)
 - [Review timing](https://developer.chrome.com/docs/webstore/review-process)
+
+- [Local user-data disclosure FAQ](https://developer.chrome.com/docs/webstore/program-policies/user-data-faq)
